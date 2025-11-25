@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	// importing ibm db2 driver so that database/sql can use it
 	_ "github.com/ibmdb/go_ibm_db"
 )
 
@@ -21,7 +22,6 @@ func NewClient(connectionParams ConnParams) Client {
 	return Client{
 		ConnectParams: connectionParams,
 	}
-
 }
 
 func main() {
@@ -36,12 +36,12 @@ func main() {
 }
 
 // Pool will connect to DB2 and return a new DB2 pool
-func (p *Client) Pool() (*Pool, error) {
-	if p.pool != nil {
-		return p.pool, nil
+func (cl *Client) Pool() (*Pool, error) {
+	if cl.pool != nil {
+		return cl.pool, nil
 	}
 
-	pool, err := sql.Open("go_ibm_db", p.ConnectParams.String())
+	pool, err := sql.Open("go_ibm_db", cl.ConnectParams.String())
 	if err != nil {
 		return nil, err
 	} else if err = pool.Ping(); err != nil {
@@ -49,10 +49,11 @@ func (p *Client) Pool() (*Pool, error) {
 	} else if _, err := pool.Query("SELECT 1 FROM SYSIBM.SYSDUMMY1"); err != nil {
 		return nil, err
 	}
-	p.pool = &Pool{pool: *pool}
-	return p.pool, nil
+	cl.pool = &Pool{pool: pool}
+	return cl.pool, nil
 }
 
+// ConsistencyTest runs a consistency test against DB2
 func (cl Client) ConsistencyTest(
 	ctx context.Context,
 	olapQuery string,
@@ -109,7 +110,7 @@ func (cl Client) ConsistencyTest(
 	go func() {
 		logSinceElapsed("T2: BEGIN;")
 		if err := conn2.Begin(); err != nil {
-
+			logger.Fatal().Msgf("error during begin transaction: %v", err)
 		}
 
 		logSinceElapsed("T2: SELECT AVG(price) AS avgprice FROM gotest.products;")

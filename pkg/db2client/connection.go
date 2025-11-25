@@ -6,16 +6,19 @@ import (
 	"fmt"
 )
 
+// Connection is a wrapper over sql.Conn, so that we can add methods
 type Connection struct {
 	ctx  context.Context
 	conn sql.Conn
 	tx   *sql.Tx
 }
 
+// Close closes the connection
 func (c Connection) Close() error {
 	return c.conn.Close()
 }
 
+// Execute will execute a query and return number of affected rows
 func (c Connection) Execute(query string) (int64, error) {
 	r, err := c.conn.ExecContext(c.ctx, query)
 	if err != nil {
@@ -24,6 +27,7 @@ func (c Connection) Execute(query string) (int64, error) {
 	return r.RowsAffected()
 }
 
+// Query will execute a query and return a list of maps where every list item is a row and every map item is a column
 func (c Connection) Query(query string, args ...any) ([]map[string]any, error) {
 	rows, err := c.conn.QueryContext(c.ctx, query, args...)
 	if err != nil {
@@ -32,8 +36,8 @@ func (c Connection) Query(query string, args ...any) ([]map[string]any, error) {
 	return rowsToMaps(rows)
 }
 
+// QueryOneRow executes a query and expectes one row, or fails. On success it returns the row.
 func (c Connection) QueryOneRow(query string, args ...any) (map[string]any, error) {
-
 	rows, queryErr := c.Query(query)
 	if queryErr != nil {
 		logger.Fatal().Msgf("error while executing olap query %v", queryErr)
@@ -44,10 +48,12 @@ func (c Connection) QueryOneRow(query string, args ...any) (map[string]any, erro
 	return rows[0], nil
 }
 
+// SetIsolationLevel sets the isolation level on a connection
 func (c Connection) SetIsolationLevel(level IsolationLevel) {
 	c.Execute(fmt.Sprintf("SET CURRENT ISOLATION %s;", level))
 }
 
+// Begin starts a transaction. In this case there is a one-on-one relation between the transaction and the connection
 func (c Connection) Begin() error {
 	tx, err := c.conn.BeginTx(c.ctx, nil)
 	if err != nil {
@@ -57,6 +63,7 @@ func (c Connection) Begin() error {
 	return nil
 }
 
+// Commit will commit the connection
 func (c Connection) Commit() error {
 	if c.tx != nil {
 		if err := c.tx.Commit(); err != nil {
@@ -67,6 +74,7 @@ func (c Connection) Commit() error {
 	return nil
 }
 
+// Rollback will rollback the transaction
 func (c Connection) Rollback() error {
 	if c.tx != nil {
 		if err := c.tx.Rollback(); err != nil {
