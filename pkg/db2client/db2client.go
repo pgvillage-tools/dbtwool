@@ -1,33 +1,49 @@
-package main
+// Package db2client holds all code to connect to db2
+package db2client
 
 import (
 	"context"
 	"database/sql"
 	"fmt"
 	"log"
-	"os"
 	"time"
 
 	_ "github.com/ibmdb/go_ibm_db"
 )
 
-func main() {
-	host := getEnv("DB2_HOST", "db2")
-	port := getEnv("DB2_PORT", "50000")
-	dbname := getEnv("DB2_DATABASE", "sample")
-	uid := getEnv("DB2_USER", "db2inst1")
-	pwd := os.Getenv("DB2_PASSWORD")
+// Client is the main object to connect to DB2
+type Client struct {
+	ConnectParams ConnParams
+}
 
-	connString := fmt.Sprintf(
-		"HOSTNAME=%s;PORT=%s;DATABASE=%s;UID=%s;PWD=%s;PROTOCOL=TCPIP",
-		host, port, dbname, uid, pwd,
+// NewClient returns a new Client
+func NewClient(connectionParams ConnParams) Client {
+	return Client{
+		ConnectParams: connectionParams,
+	}
+
+}
+
+func main() {
+	cl := NewClient(ConnParamsFromEnv())
+	cl.ConsistencyTest(
+		"SELECT AVG(price) AS avgprice FROM gotest.products;",
+		"SELECT * FROM gotest.products FOR UPDATE;",
+		"UPDATE gotest.products SET price = 5000 where product_id = 1;",
 	)
+}
+
+func (cl Client) ConsistencyTest(
+	olapQuery string,
+	oltpLockQuery string,
+	oltpUpdateQuery string,
+) {
 
 	const (
 		query = "SELECT 1 FROM SYSIBM.SYSDUMMY1"
 	)
 
-	if firstTestConnection, err := sql.Open("go_ibm_db", connString); err != nil {
+	if firstTestConnection, err := sql.Open("go_ibm_db", cl.ConnectParams.String()); err != nil {
 		log.Fatalf("Failed to open DB: %v", err)
 	} else if err = firstTestConnection.Ping(); err != nil {
 		log.Fatalf("Failed to connect: %v", err)
@@ -41,7 +57,7 @@ func main() {
 
 	ctx := context.Background()
 
-	db, err := sql.Open("go_ibm_db", connString)
+	db, err := sql.Open("go_ibm_db", cl.ConnectParams.String())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -74,7 +90,7 @@ func main() {
 	logSinceElapsed("T1: BEGIN;")
 	transaction1, _ := conn1.BeginTx(ctx, nil)
 
-	row := transaction1.QueryRowContext(ctx, "SELECT AVG(price) AS avgprice FROM gotest.products;")
+	row := transaction1.QueryRowContext(ctx, olapQuery)
 	var avgprice float64
 	if err := row.Scan(&avgprice); err != nil {
 		log.Fatal(err)
@@ -82,7 +98,7 @@ func main() {
 	fmt.Println("T1: avgprice: ", avgprice)
 
 	logSinceElapsed("T1: SELECT * FROM gotest.products FOR UPDATE;")
-	transaction1.ExecContext(ctx, "SELECT * FROM gotest.products FOR UPDATE;")
+	transaction1.ExecContext(ctx, oltpLockQuery)
 
 	//Try select
 	go func() {
@@ -90,7 +106,7 @@ func main() {
 		transaction2, _ := conn2.BeginTx(ctx, nil)
 
 		logSinceElapsed("T2: SELECT AVG(price) AS avgprice FROM gotest.products;")
-		row := transaction2.QueryRowContext(ctx, "SELECT AVG(price) AS avgprice FROM gotest.products;")
+		row := transaction2.QueryRowContext(ctx, olapQuery)
 		var avgprice float64
 		if err := row.Scan(&avgprice); err != nil {
 			log.Fatal(err)
@@ -102,20 +118,13 @@ func main() {
 
 	//Update
 	logSinceElapsed("T1: UPDATE gotest.products SET price = 5000 where product_id = 1;")
-	transaction1.ExecContext(ctx, "UPDATE gotest.products SET price = 5000 where product_id = 1;")
+	transaction1.ExecContext(ctx, oltpUpdateQuery)
 
 	logSinceElapsed("T1: sleeping 10s');")
 	time.Sleep(10 * time.Second)
 
 	logSinceElapsed("T1: COMMIT;")
 	transaction1.Commit()
-}
-
-func getEnv(key, def string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return def
 }
 
 func RowsToMaps(rows *sql.Rows) ([]map[string]interface{}, error) {
