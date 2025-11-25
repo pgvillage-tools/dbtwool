@@ -77,8 +77,8 @@ type args map[string]arg
 
 var (
 	allArgs = args{
-		"cfgFile": {short: "c", defValue: "config.yaml", argType: typePath, desc: `config file`},
-		"outFile": {short: "o", defValue: "-", argType: typePath, desc: `Send to output (- means stdout)`},
+		"cfgFile":        {short: "c", defValue: "config.yaml", argType: typePath, desc: `config file`},
+		"isolationLevel": {short: "i", defValue: "CS", argType: typeString, desc: `Transaction isolation level`},
 	}
 )
 

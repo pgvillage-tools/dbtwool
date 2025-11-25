@@ -24,17 +24,6 @@ func NewClient(connectionParams ConnParams) Client {
 	}
 }
 
-func main() {
-	cl := NewClient(ConnParamsFromEnv())
-	cl.ConsistencyTest(
-		context.Background(),
-		"SELECT AVG(price) AS avgprice FROM gotest.products;",
-		IsoLevelUncommittedRead,
-		"SELECT * FROM gotest.products FOR UPDATE;",
-		"UPDATE gotest.products SET price = 5000 where product_id = 1;",
-	)
-}
-
 // Pool will connect to DB2 and return a new DB2 pool
 func (cl *Client) Pool() (*Pool, error) {
 	if cl.pool != nil {
