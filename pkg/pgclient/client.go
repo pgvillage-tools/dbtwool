@@ -1,5 +1,4 @@
-// Package db2client holds all code to connect to db2
-package db2client
+package pgclient
 
 import (
 	"context"
@@ -8,7 +7,7 @@ import (
 	"time"
 
 	// importing ibm db2 driver so that database/sql can use it
-	_ "github.com/ibmdb/go_ibm_db"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 // Client is the main object to connect to DB2
@@ -30,19 +29,19 @@ func (cl *Client) Pool() (*Pool, error) {
 		return cl.pool, nil
 	}
 
-	pool, err := sql.Open("go_ibm_db", cl.ConnectParams.String())
+	pool, err := sql.Open("pgx", cl.ConnectParams.GetConnectionString())
 	if err != nil {
 		return nil, err
 	} else if err = pool.Ping(); err != nil {
 		return nil, err
-	} else if _, err := pool.Query("SELECT 1 FROM SYSIBM.SYSDUMMY1"); err != nil {
+	} else if _, err := pool.Query("SELECT 1;"); err != nil {
 		return nil, err
 	}
 	cl.pool = &Pool{pool: pool}
 	return cl.pool, nil
 }
 
-// ConsistencyTest runs a consistency test against DB2
+// ConsistencyTest runs a consistency test against postgres
 func (cl Client) ConsistencyTest(
 	ctx context.Context,
 	olapQuery string,
@@ -56,7 +55,7 @@ func (cl Client) ConsistencyTest(
 	}
 
 	// Get 2 dedicated physical connections from the pool
-	conn1, connectErr1 := pool.Connect(ctx) //
+	conn1, connectErr1 := pool.Connect(ctx)
 	if connectErr1 != nil {
 		logger.Fatal().Msgf("connect error for connection 1: %e", connectErr1)
 	}

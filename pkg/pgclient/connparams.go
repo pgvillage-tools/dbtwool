@@ -31,7 +31,7 @@ func (cp ConnParams) GetConnectionString() string {
 // ConnParamsFromEnv generates a new default ConnParams from env variables with defaults
 func ConnParamsFromEnv() ConnParams {
 	return ConnParams{
-		Host:     utils.GetEnv("PGHOST", "locahost"),
+		Host:     utils.GetEnv("PGHOST", "localhost"),
 		Port:     utils.GetEnv("PGPORT", "5432"),
 		Database: utils.GetEnv("PGDATABASE", "postgres"),
 		User:     utils.GetEnv("PGUSER", "postgres"),

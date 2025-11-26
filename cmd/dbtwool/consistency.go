@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/pgvillage-tools/dbtwool/pkg/db2client"
+	"github.com/pgvillage-tools/dbtwool/pkg/pgclient"
 	"github.com/spf13/cobra"
 )
 
@@ -19,11 +20,20 @@ func consistencyCommand() *cobra.Command {
 				log.Info("Isolation level set to default.")
 			}
 
-			cl := db2client.NewClient(db2client.ConnParamsFromEnv())
-			cl.ConsistencyTest(
+			cl1 := db2client.NewClient(db2client.ConnParamsFromEnv())
+			cl1.ConsistencyTest(
 				context.Background(),
 				"SELECT AVG(price) AS avgprice FROM gotest.products;",
 				db2client.IsolationLevel(isolationLevel),
+				"SELECT * FROM gotest.products FOR UPDATE;",
+				"UPDATE gotest.products SET price = 5000 where product_id = 1;",
+			)
+
+			c2 := pgclient.NewClient(pgclient.ConnParamsFromEnv())
+			c2.ConsistencyTest(
+				context.Background(),
+				"SELECT AVG(price) AS avgprice FROM gotest.products;",
+				pgclient.IsolationLevel(isolationLevel),
 				"SELECT * FROM gotest.products FOR UPDATE;",
 				"UPDATE gotest.products SET price = 5000 where product_id = 1;",
 			)
