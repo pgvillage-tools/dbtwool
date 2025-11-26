@@ -34,4 +34,4 @@ go.work.sum
 # .vscode/
 
 database
-set_env.ps1
+scripts/set_windows_envs.ps1
