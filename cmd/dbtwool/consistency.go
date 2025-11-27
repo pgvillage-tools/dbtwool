@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
+	"strconv"
 
-	"github.com/pgvillage-tools/dbtwool/pkg/db2client"
-	"github.com/pgvillage-tools/dbtwool/pkg/pgclient"
+	"github.com/pgvillage-tools/dbtwool/pkg/dbclient"
 	"github.com/spf13/cobra"
 )
 
@@ -15,25 +15,29 @@ func consistencyCommand() *cobra.Command {
 		Short: "Run a consistency test.",
 		Long:  `Use this command to test consistency with different transaction isolation levels.`,
 		Run: func(_ *cobra.Command, _ []string) {
-			isolationLevel := consistencyArgs.GetString("isolationLevel")
-			if isolationLevel == "" {
-				log.Info("Isolation level set to default.")
+			isolationLevel, error := strconv.Atoi(consistencyArgs.GetString("isolationLevel"))
+			if error != nil {
+				isolationLevel = 1
 			}
 
-			cl1 := db2client.NewClient(db2client.ConnParamsFromEnv())
+			var db2Params dbclient.ConnParams = dbclient.NewDb2ConnparamsFromEnv()
+
+			cl1 := dbclient.NewClient(db2Params, dbclient.RdbmsDB2)
 			cl1.ConsistencyTest(
 				context.Background(),
 				"SELECT AVG(price) AS avgprice FROM gotest.products;",
-				db2client.IsolationLevel(isolationLevel),
+				isolationLevel,
 				"SELECT * FROM gotest.products FOR UPDATE;",
 				"UPDATE gotest.products SET price = 5000 where product_id = 1;",
 			)
 
-			c2 := pgclient.NewClient(pgclient.ConnParamsFromEnv())
+			var pgParams dbclient.ConnParams = dbclient.NewPgConnParamsFromEnv()
+
+			c2 := dbclient.NewClient(pgParams, dbclient.RdbmsPostgres)
 			c2.ConsistencyTest(
 				context.Background(),
 				"SELECT AVG(price) AS avgprice FROM gotest.products;",
-				pgclient.IsolationLevel(isolationLevel),
+				isolationLevel,
 				"SELECT * FROM gotest.products FOR UPDATE;",
 				"UPDATE gotest.products SET price = 5000 where product_id = 1;",
 			)

@@ -1,4 +1,5 @@
-package pgclient
+// Package db2client holds all code to connect to db2
+package dbclient
 
 import (
 	"context"
@@ -6,7 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	// importing ibm db2 driver so that database/sql can use it
+	// importing db drivers so that database/sql can use it
+	_ "github.com/ibmdb/go_ibm_db"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
@@ -14,12 +16,14 @@ import (
 type Client struct {
 	ConnectParams ConnParams
 	pool          *Pool
+	rdbms         Rdbms
 }
 
 // NewClient returns a new Client
-func NewClient(connectionParams ConnParams) Client {
+func NewClient(connectionParams ConnParams, rdbms Rdbms) Client {
 	return Client{
 		ConnectParams: connectionParams,
+		rdbms:         rdbms,
 	}
 }
 
@@ -29,23 +33,28 @@ func (cl *Client) Pool() (*Pool, error) {
 		return cl.pool, nil
 	}
 
-	pool, err := sql.Open("pgx", cl.ConnectParams.GetConnectionString())
+	driver, ok := cl.rdbms.DriverName()
+	if !ok {
+		logger.Fatal().Msgf("Cannot start a connection. Driver not supported: %s", driver)
+	}
+
+	pool, err := sql.Open(driver, cl.ConnectParams.GetConnString())
 	if err != nil {
 		return nil, err
 	} else if err = pool.Ping(); err != nil {
 		return nil, err
-	} else if _, err := pool.Query("SELECT 1;"); err != nil {
+	} else if _, err := pool.Query(GetTestQuery(cl.rdbms)); err != nil {
 		return nil, err
 	}
 	cl.pool = &Pool{pool: pool}
 	return cl.pool, nil
 }
 
-// ConsistencyTest runs a consistency test against postgres
+// ConsistencyTest runs a consistency test against DB2
 func (cl Client) ConsistencyTest(
 	ctx context.Context,
 	olapQuery string,
-	isolationLevel IsolationLevel,
+	isolationLevel int,
 	oltpLockQuery string,
 	oltpUpdateQuery string,
 ) {
@@ -55,7 +64,7 @@ func (cl Client) ConsistencyTest(
 	}
 
 	// Get 2 dedicated physical connections from the pool
-	conn1, connectErr1 := pool.Connect(ctx)
+	conn1, connectErr1 := pool.Connect(ctx) //
 	if connectErr1 != nil {
 		logger.Fatal().Msgf("connect error for connection 1: %e", connectErr1)
 	}
@@ -74,8 +83,9 @@ func (cl Client) ConsistencyTest(
 		logger.Info().Int64("elapsed (ms)", elapsed).Msgf(formatted, args...)
 	}
 
-	fmt.Printf("CONN2: SET CURRENT ISOLATION %s;\n", isolationLevel)
-	conn2.SetIsolationLevel(isolationLevel)
+	isolationLevelQuery := GetIsolationLevelQuery(cl.rdbms, isolationLevel)
+	logger.Info().Msgf("CONN2: %s", isolationLevelQuery)
+	conn2.Execute(isolationLevelQuery)
 
 	logSinceElapsed("T1: BEGIN;")
 	if err := conn1.Begin(); err != nil {
@@ -85,11 +95,11 @@ func (cl Client) ConsistencyTest(
 	if row, err := conn1.QueryOneRow(olapQuery); err != nil {
 		logger.Fatal().Msgf("error during fetch of olap query: %v", err)
 	} else {
-		fmt.Println("T1: result: %v", row)
+		logger.Info().Msgf("T1: result: %v", row)
 	}
 
 	//Lock rows
-	logSinceElapsed("T1: SELECT * FROM gotest.products FOR UPDATE;")
+	logSinceElapsed(fmt.Sprintf("T1: %s", oltpLockQuery))
 	if _, err := conn1.Execute(oltpLockQuery); err != nil {
 		logger.Fatal().Err(err)
 	}
@@ -101,17 +111,17 @@ func (cl Client) ConsistencyTest(
 			logger.Fatal().Msgf("error during begin transaction: %v", err)
 		}
 
-		logSinceElapsed("T2: SELECT AVG(price) AS avgprice FROM gotest.products;")
+		logSinceElapsed(fmt.Sprintf("T2: %s", olapQuery))
 		if row, err := conn2.QueryOneRow(olapQuery); err != nil {
 			logger.Fatal().Msgf("error during fetch of olap query: %v", err)
 		} else {
-			fmt.Println("T2: result: %v", row)
+			logger.Info().Msgf("T2: result: %v", row)
 		}
 		conn2.Commit()
 	}()
 
 	//Update
-	logSinceElapsed("T1: UPDATE gotest.products SET price = 5000 where product_id = 1;")
+	logSinceElapsed(fmt.Sprintf("T1: %s", oltpUpdateQuery))
 	if _, err := conn1.Execute(oltpUpdateQuery); err != nil {
 		logger.Fatal().Err(err)
 	}

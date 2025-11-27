@@ -1,4 +1,4 @@
-package pgclient
+package dbclient
 
 import (
 	"context"

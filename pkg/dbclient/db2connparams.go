@@ -1,4 +1,4 @@
-package db2client
+package dbclient
 
 import (
 	"fmt"
@@ -9,20 +9,19 @@ import (
 )
 
 // ConnParams objects define connection parameters for a DB2 connection
-type ConnParams map[string]string
+type Db2ConnParams map[string]string
 
-func (cp ConnParams) String() string {
+func (cp Db2ConnParams) GetConnString() string {
 	var l []string
 	for key, value := range cp {
 		l = append(l, fmt.Sprintf("%s=%s", key, value))
 	}
-	logger.Info().Msg(strings.Join(l, ";"))
 	return strings.Join(l, ";")
 }
 
 // ConnParamsFromEnv generates a new default ConnParams from env variables with defaults
-func ConnParamsFromEnv() ConnParams {
-	return ConnParams{
+func NewDb2ConnparamsFromEnv() ConnParams {
+	return Db2ConnParams{
 		"HOSTNAME": utils.GetEnv("DB2_HOST", "db2"),
 		"PORT":     utils.GetEnv("DB2_PORT", "50000"),
 		"DATABASE": utils.GetEnv("DB2_DATABASE", "sample"),

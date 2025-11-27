@@ -1,4 +1,4 @@
-package pgclient
+package dbclient
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 )
 
 // ConnParams objects define connection parameters for a DB2 connection
-type ConnParams struct {
+type PgConnParams struct {
 	Host     string
 	Port     string
 	Database string
@@ -16,7 +16,7 @@ type ConnParams struct {
 	SslMode  string
 }
 
-func (cp ConnParams) GetConnectionString() string {
+func (cp PgConnParams) GetConnString() string {
 	return fmt.Sprintf(
 		"host=%s port=%s dbname=%s user=%s password=%s sslmode=%s",
 		cp.Host,
@@ -29,8 +29,8 @@ func (cp ConnParams) GetConnectionString() string {
 }
 
 // ConnParamsFromEnv generates a new default ConnParams from env variables with defaults
-func ConnParamsFromEnv() ConnParams {
-	return ConnParams{
+func NewPgConnParamsFromEnv() ConnParams {
+	return PgConnParams{
 		Host:     utils.GetEnv("PGHOST", "localhost"),
 		Port:     utils.GetEnv("PGPORT", "5432"),
 		Database: utils.GetEnv("PGDATABASE", "postgres"),

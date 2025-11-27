@@ -1,4 +1,4 @@
-package db2client
+package dbclient
 
 import (
 	"context"
@@ -46,11 +46,6 @@ func (c Connection) QueryOneRow(query string, args ...any) (map[string]any, erro
 		logger.Fatal().Msgf("expected 1 row on olap query: %v", queryErr)
 	}
 	return rows[0], nil
-}
-
-// SetIsolationLevel sets the isolation level on a connection
-func (c Connection) SetIsolationLevel(level IsolationLevel) {
-	c.Execute(fmt.Sprintf("SET CURRENT ISOLATION %s;", level))
 }
 
 // Begin starts a transaction. In this case there is a one-on-one relation between the transaction and the connection
