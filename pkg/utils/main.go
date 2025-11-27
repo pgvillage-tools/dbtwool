@@ -30,3 +30,10 @@ func AbsolutePath(relativePath string) (absPath string, err error) {
 	}
 
 }
+
+func GetEnv(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
+}

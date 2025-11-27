@@ -15,16 +15,7 @@ import (
 var (
 	cfgFile    string
 	globalArgs = []string{
-		"verbose",
 		"cfgFile",
-		"roleId",
-		"roleIdFile",
-		"secretIdFile",
-		"storePath",
-		"storeVersion",
-		"token",
-		"tokenFile",
-		"wrapped",
 	}
 )
 
@@ -50,15 +41,9 @@ func requireSubcommand(cmd *cobra.Command, args []string) error {
 func createApp() *cobra.Command {
 	cobra.OnInitialize(initConfig)
 	rootCmd := &cobra.Command{
-		Use:   "pgcustodian",
-		Short: "Vault integration for PostgreSQL TDE implementations",
-		Long: `The pgcustodian tool allows for storing TDE encryption keys on filesystem in a safe manner.
-		When writing the files, they are encrypted with a key which is stored in Hashicorp Vault.
-		When retrieving they are decrypted with the same key, again retrieved from Hashicorp Vault.
-		pgcustodian can run with an AppRole, with shortlived / onetime tokens, which means that 
-		the vault credentials never reach Postgres, and that Postgres can only read TDE keys once (before starting).
-		
-		Complete documentation is available at https://github.com/github.com/pgvillage-tools/dbtwool/`,
+		Use:               "dbtwool",
+		Short:             "Run tests against DB2 and PostgreSQL",
+		Long:              `Lorem ipsum ...`,
 		RunE:              requireSubcommand,
 		CompletionOptions: cobra.CompletionOptions{},
 		TraverseChildren:  true,
@@ -70,11 +55,11 @@ func createApp() *cobra.Command {
 	viper.AddConfigPath(viper.GetString("cfgFile"))
 	err := viper.ReadInConfig()
 	if err == nil {
-		fmt.Printf("pgcustodian is reading config from this config file: %s", viper.ConfigFileUsed())
+		fmt.Printf("dbtwool is reading config from this config file: %s", viper.ConfigFileUsed())
 	}
 
 	rootCmd.AddCommand(
-		csvCommand(),
+		consistencyCommand(),
 	)
 	return rootCmd
 }
@@ -89,7 +74,7 @@ func main() {
 	log.Info("finished")
 }
 
-// Read settings as key value pairs from the ".pgcustodian" config file in the home directory.
+// Read settings as key value pairs from the ".dbtwool" config file in the home directory.
 // This is (obscurely) referenced from the "createApp" function above.
 // TODO would this be clearer if moved above createApp?
 func initConfig() {
@@ -104,7 +89,7 @@ func initConfig() {
 		// Search config in home directory with name ".cobra" (without extension).
 		viper.AddConfigPath(home)
 		viper.SetConfigType("yaml")
-		viper.SetConfigName(".pgcustodian")
+		viper.SetConfigName(".dbtwool")
 	}
 
 	viper.AutomaticEnv()
