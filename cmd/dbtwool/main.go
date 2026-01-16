@@ -39,12 +39,16 @@ func requireSubcommand(cmd *cobra.Command, args []string) error {
 // configuration file. Override the default location with -c,--cfgFile).
 // Override the target pg_hba.conf file with -f, --hbaFile
 func createApp() *cobra.Command {
+	var appArgs args
 	cobra.OnInitialize(initConfig)
 	rootCmd := &cobra.Command{
-		Use:               "dbtwool",
-		Short:             "Run tests against DB2 and PostgreSQL",
-		Long:              `Lorem ipsum ...`,
-		RunE:              requireSubcommand,
+		Use:   "dbtwool",
+		Short: "Run tests against DB2 and PostgreSQL",
+		Long:  `Lorem ipsum ...`,
+		Run: func(cmd *cobra.Command, args []string) {
+			requireSubcommand(cmd, args)
+			fmt.Println("app:" + appArgs.GetString("datasource"))
+		},
 		CompletionOptions: cobra.CompletionOptions{},
 		TraverseChildren:  true,
 		Version:           version.GetAppVersion(),
@@ -58,8 +62,12 @@ func createApp() *cobra.Command {
 		fmt.Printf("dbtwool is reading config from this config file: %s", viper.ConfigFileUsed())
 	}
 
+	appArgs = allArgs.commandArgs(rootCmd, append(globalArgs, "datasource"))
+
 	rootCmd.AddCommand(
 		consistencyCommand(),
+		lobPerformanceCommand(),
+		ruPerformanceCommand(),
 	)
 	return rootCmd
 }
