@@ -2,7 +2,10 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
+	"github.com/pgvillage-tools/dbtwool/pkg/dbclient"
+	"github.com/pgvillage-tools/dbtwool/pkg/lobperformance"
 	"github.com/spf13/cobra"
 )
 
@@ -34,6 +37,7 @@ func lobGenCommand() *cobra.Command {
 				fmt.Println("gen:" + element)
 			}
 			fmt.Println("gen:" + genArgs.GetString("bytesize"))
+
 		},
 	}
 
@@ -50,6 +54,14 @@ func lobStageCommand() *cobra.Command {
 		Run: func(_ *cobra.Command, _ []string) {
 			fmt.Println("stage:" + stageArgs.GetString("table"))
 			fmt.Println("stage:" + stageArgs.GetString("datasource"))
+
+			schema, table, err := parseSchemaTable(stageArgs.GetString("table"))
+
+			if err == nil {
+				lobperformance.LobPerformanceStage(dbclient.GetRdbmsFromString(stageArgs.GetString("datasource")), schema, table)
+			} else {
+				fmt.Println("An error occurred while parsing the schema + table: %e", err)
+			}
 		},
 	}
 
@@ -77,4 +89,24 @@ func lobTestCommand() *cobra.Command {
 	testExecutionArgs = allArgs.commandArgs(testExecutionCommand, append(globalArgs, "parallel", "table", "spread"))
 
 	return testExecutionCommand
+}
+
+func parseSchemaTable(fullName string) (schema string, table string, err error) {
+	if fullName == "" {
+		return "", "", fmt.Errorf("table name cannot be empty")
+	}
+
+	if strings.Contains(fullName, ".") {
+		parts := strings.SplitN(fullName, ".", 2)
+		schema = parts[0]
+		table = parts[1]
+
+		if schema == "" || table == "" {
+			return "", "", fmt.Errorf("invalid table name %q, expected schema.table", fullName)
+		}
+
+		return schema, table, nil
+	} else {
+		return "dbtwooltests", fullName, nil
+	}
 }
