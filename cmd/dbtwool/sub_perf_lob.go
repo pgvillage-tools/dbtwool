@@ -30,7 +30,9 @@ func lobGenCommand() *cobra.Command {
 		Short: "generate all the things",
 		Long:  "Use this command to generate data to test with.",
 		Run: func(_ *cobra.Command, _ []string) {
-			fmt.Println("gen:" + genArgs.GetString("spread"))
+			for _, element := range genArgs.GetStringSlice("spread") {
+				fmt.Println("gen:" + element)
+			}
 			fmt.Println("gen:" + genArgs.GetString("bytesize"))
 		},
 	}

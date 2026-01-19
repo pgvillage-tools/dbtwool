@@ -29,7 +29,9 @@ func ruGenCommand() *cobra.Command {
 		Short: "generate all the things",
 		Long:  "Use this command to generate data to test with.",
 		Run: func(_ *cobra.Command, _ []string) {
-			fmt.Println("gen:" + genCmdArgs.GetString("spread"))
+			for _, element := range genCmdArgs.GetStringSlice("spread") {
+				fmt.Println("gen:" + element)
+			}
 			fmt.Println("gen:" + genCmdArgs.GetString("bytesize"))
 		},
 	}
