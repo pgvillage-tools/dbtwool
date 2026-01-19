@@ -42,16 +42,10 @@ func createApp() *cobra.Command {
 	// var appArgs args
 	cobra.OnInitialize(initConfig)
 	rootCmd := &cobra.Command{
-		Use:   "dbtwool",
-		Short: "Run tests against DB2 and PostgreSQL",
-		Long:  `Lorem ipsum ...`,
-		RunE:  requireSubcommand,
-		/*
-			Run: func(cmd *cobra.Command, args []string) {
-				requireSubcommand(cmd, args)
-				// fmt.Println("app:" + appArgs.GetString("datasource"))
-			},
-		*/
+		Use:               "dbtwool",
+		Short:             "Run tests against DB2 and PostgreSQL",
+		Long:              `Lorem ipsum ...`,
+		RunE:              requireSubcommand,
 		CompletionOptions: cobra.CompletionOptions{},
 		TraverseChildren:  true,
 		Version:           version.GetAppVersion(),
@@ -64,8 +58,6 @@ func createApp() *cobra.Command {
 	if err == nil {
 		fmt.Printf("dbtwool is reading config from this config file: %s", viper.ConfigFileUsed())
 	}
-
-	// appArgs = allArgs.commandArgs(rootCmd, append(globalArgs, "datasource"))
 
 	rootCmd.AddCommand(
 		consistencyCommand(),
