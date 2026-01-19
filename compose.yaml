@@ -1,0 +1,34 @@
+version: "3.9"
+
+services:
+  go-db2-cli:
+    build:
+      context: .
+    container_name: go-db2-cli
+    environment:
+      DB2_HOST: db2 #How the container is visible from here (not localhost)
+      DB2_PORT: 50000
+      DB2_DATABASE: testdb
+      DB2_USER: db2inst1
+      DB2_PASSWORD: godb2client
+      PG_HOST: pg1 #How the container is visible from here (not localhost)
+      PG_PORT: 5432
+      PG_DATABASE: postgres
+      PG_USER: postgres
+      PG_PASSWORD: gopgclient
+    
+    volumes: #mount the directory this compose.yaml is in to the container.
+      - ./:/app
+    
+    stdin_open: true #This keeps the container from exiting
+    tty: true #This fixes weird shell behaviour
+    
+    networks:
+      - db2net
+      - pgnet
+
+networks:
+  db2net:
+    external: true
+  pgnet:
+    external: true
