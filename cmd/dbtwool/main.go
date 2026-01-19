@@ -39,6 +39,7 @@ func requireSubcommand(cmd *cobra.Command, args []string) error {
 // configuration file. Override the default location with -c,--cfgFile).
 // Override the target pg_hba.conf file with -f, --hbaFile
 func createApp() *cobra.Command {
+	// var appArgs args
 	cobra.OnInitialize(initConfig)
 	rootCmd := &cobra.Command{
 		Use:               "dbtwool",
@@ -60,6 +61,8 @@ func createApp() *cobra.Command {
 
 	rootCmd.AddCommand(
 		consistencyCommand(),
+		lobPerformanceCommand(),
+		ruCommand(),
 	)
 	return rootCmd
 }

@@ -19,6 +19,7 @@ const (
 	typeUInt
 	typeBool
 	typeString
+	typeStringArray
 	typePath
 	typeUnknown
 )
@@ -30,12 +31,13 @@ var (
 
 var (
 	typeToString = map[aType]string{
-		typeCount:   "typeCount",
-		typeUInt:    "typeUInt",
-		typeBool:    "typeBool",
-		typeString:  "typeString",
-		typePath:    "typePath",
-		typeUnknown: "typeUnknown",
+		typeCount:       "typeCount",
+		typeUInt:        "typeUInt",
+		typeBool:        "typeBool",
+		typeString:      "typeString",
+		typeStringArray: "typeStringArray",
+		typePath:        "typePath",
+		typeUnknown:     "typeUnknown",
 	}
 )
 
@@ -52,15 +54,16 @@ const (
 )
 
 type arg struct {
-	short        string
-	desc         string
-	extraEnvVars []string
-	defValue     any
-	argType      aType
-	stringValue  *string
-	uIntValue    *uint
-	intValue     *int
-	boolValue    *bool
+	short            string
+	desc             string
+	extraEnvVars     []string
+	defValue         any
+	argType          aType
+	stringValue      *string
+	stringArrayValue *[]string
+	uIntValue        *uint
+	intValue         *int
+	boolValue        *bool
 }
 
 func fromEnv(keys []string) string {
@@ -79,6 +82,11 @@ var (
 	allArgs = args{
 		"cfgFile":        {short: "c", defValue: "config.yaml", argType: typePath, desc: `config file`},
 		"isolationLevel": {short: "i", defValue: "1", argType: typeString, desc: `Transaction isolation level`},
+		"datasource":     {short: "d", defValue: "pg", argType: typeString, desc: `Datasource`},
+		"spread":         {short: "s", argType: typeStringArray, desc: `spread`},
+		"bytesize":       {short: "b", argType: typeString, desc: `What the size of the datasource should be in b, kb, gb, etc.`},
+		"table":          {short: "t", defValue: "dbtwooltests.lobtable", argType: typeString, desc: `What the schema + table name should be`},
+		"parallel":       {short: "p", defValue: 1, argType: typeUInt, desc: `The degree of parallel execution`},
 	}
 )
 
@@ -96,15 +104,6 @@ func (as args) commandArgs(command *cobra.Command, enabledArguments []string) (m
 		defaultFromEnv := fromEnv(envVars)
 		switch argConfig.argType {
 		case typeCount:
-			// if defaultFromEnv != "" {
-			// 	var err error
-			// 	argConfig.defValue, err = strconv.Atoi(defaultFromEnv)
-			// 	if err != nil {
-			// 		panic(fmt.Sprintf("default %s from environment vars %v is not a valid int", defaultFromEnv, envVars))
-			// 	}
-			// } else if argConfig.defValue == nil {
-			// 	argConfig.defValue = 0
-			// }
 			argConfig.intValue = command.PersistentFlags().CountP(key, argConfig.short, argConfig.desc)
 		case typeUInt:
 			if defaultFromEnv != "" {
@@ -151,6 +150,25 @@ func (as args) commandArgs(command *cobra.Command, enabledArguments []string) (m
 				defaultValue = path.Join(confDir, defaultValue)
 			}
 			argConfig.stringValue = command.PersistentFlags().StringP(key, argConfig.short, defaultValue, argConfig.desc)
+		case typeStringArray:
+			if defaultFromEnv != "" {
+				argConfig.defValue = strings.Split(defaultFromEnv, ",")
+			} else if argConfig.defValue == nil {
+				argConfig.defValue = []string{}
+			}
+			defaultValue, ok := argConfig.defValue.([]string)
+			if !ok {
+				panic(
+					fmt.Sprintf(
+						"requested argument %s is %s, but %v (%T) cannot be parsed to %T",
+						key,
+						argConfig.argType.String(),
+						argConfig.defValue,
+						argConfig.defValue,
+						defaultValue,
+					))
+			}
+			argConfig.stringArrayValue = command.PersistentFlags().StringSliceP(key, argConfig.short, defaultValue, argConfig.desc)
 		case typeBool:
 			if defaultFromEnv != "" {
 				var err error
@@ -191,6 +209,20 @@ func (as args) GetString(argument string) (value string) {
 		return value
 	case typeString:
 		value = *arg.stringValue
+		return value
+	default:
+		panic(fmt.Sprintf("requesting string value for %s, but it is not defined as such", argument))
+	}
+}
+
+func (as args) GetStringSlice(argument string) (value []string) {
+	arg, exists := as[argument]
+	if !exists {
+		panic(fmt.Sprintf("requesting %s, but it is not defined", argument))
+	}
+	switch arg.argType {
+	case typeStringArray:
+		value = *arg.stringArrayValue
 		return value
 	default:
 		panic(fmt.Sprintf("requesting string value for %s, but it is not defined as such", argument))
