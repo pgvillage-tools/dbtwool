@@ -7,6 +7,10 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+const (
+	readWriteUGA = 0644
+)
+
 var (
 	log  *zap.SugaredLogger
 	atom zap.AtomicLevel
@@ -29,7 +33,7 @@ func initLogger(logFilePath string) {
 
 	// Optimize the Kafka output for machine consumption and the console output
 	// for human operators.
-	//encoderCfg := zap.NewDevelopmentEncoderConfig()
+	// encoderCfg := zap.NewDevelopmentEncoderConfig()
 	encoderCfg := zap.NewProductionEncoderConfig()
 	encoderCfg.EncodeTime = zapcore.RFC3339TimeEncoder
 	consoleEncoder := zapcore.NewConsoleEncoder(encoderCfg)
@@ -40,7 +44,7 @@ func initLogger(logFilePath string) {
 	if logFilePath != "" {
 		fileEncoder := zapcore.NewConsoleEncoder(encoderCfg)
 		// #nosec G304,G302 -- path from variable is ok in this case (pgquartz is run by a user with low OS permissions)
-		logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, readWriteUGA)
 		if err != nil {
 			initLogger("")
 			log.Panicf("error while opening logfile: %s", err)

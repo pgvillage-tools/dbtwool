@@ -1,4 +1,4 @@
-// Package db2client holds all code to connect to db2
+// Package dbclient holds all code to connect to db2
 package dbclient
 
 import (
@@ -16,11 +16,11 @@ import (
 type Client struct {
 	ConnectParams ConnParams
 	pool          *Pool
-	rdbms         Rdbms
+	rdbms         RDBMS
 }
 
 // NewClient returns a new Client
-func NewClient(connectionParams ConnParams, rdbms Rdbms) Client {
+func NewClient(connectionParams ConnParams, rdbms RDBMS) Client {
 	return Client{
 		ConnectParams: connectionParams,
 		rdbms:         rdbms,
@@ -98,13 +98,13 @@ func (cl Client) ConsistencyTest(
 		logger.Info().Msgf("T1: result: %v", row)
 	}
 
-	//Lock rows
+	// Lock rows
 	logSinceElapsed(fmt.Sprintf("T1: %s", oltpLockQuery))
 	if _, err := conn1.Execute(oltpLockQuery); err != nil {
 		logger.Fatal().Err(err)
 	}
 
-	//Try select
+	// Try select
 	go func() {
 		logSinceElapsed("T2: BEGIN;")
 		if err := conn2.Begin(); err != nil {
@@ -120,7 +120,7 @@ func (cl Client) ConsistencyTest(
 		conn2.Commit()
 	}()
 
-	//Update
+	// Update
 	logSinceElapsed(fmt.Sprintf("T1: %s", oltpUpdateQuery))
 	if _, err := conn1.Execute(oltpUpdateQuery); err != nil {
 		logger.Fatal().Err(err)

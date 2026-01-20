@@ -16,5 +16,5 @@ func (p Pool) Connect(ctx context.Context) (*Connection, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Connection{ctx: ctx, conn: *conn}, nil
+	return &Connection{ctx: ctx, conn: conn}, nil
 }

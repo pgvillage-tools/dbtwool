@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -10,8 +11,12 @@ func ruCommand() *cobra.Command {
 	ruPerformanceCommand := &cobra.Command{
 		Use:   "ru-performance",
 		Short: "test db performance with read uncommitted isolation level",
-		Long:  "Use this command to create a testenvironment, create a workload, and execute a performance test for read uncommitted isolation level.",
-		RunE:  requireSubcommand,
+		Long: strings.Join([]string{
+			"Use this command to create a testenvironment",
+			"create a workload",
+			"and execute a performance test for read uncommitted isolation level.",
+		}, ", "),
+		RunE: requireSubcommand,
 	}
 
 	ruPerformanceCommand.AddCommand(

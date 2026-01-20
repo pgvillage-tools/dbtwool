@@ -7,8 +7,8 @@ type QueryHelper struct {
 const (
 	pgTestQuery                      = "SELECT 1;"
 	db2TestQuery                     = "SELECT 1 FROM SYSIBM.SYSDUMMY1"
-	baseSetIsolationLevelSqlDb2      = "SET CURRENT ISOLATION "
-	baseSetIsolationLevelSqlPostgres = "SET TRANSACTION ISOLATION LEVEL "
+	baseSetIsolationLevelSQLDb2      = "SET CURRENT ISOLATION "
+	baseSetIsolationLevelSQLPostgres = "SET TRANSACTION ISOLATION LEVEL "
 	db2UncommittedRead               = "UR"
 	db2ReadStability                 = "RS"
 	db2CursorStability               = "CS"
@@ -18,17 +18,20 @@ const (
 	pgSerializable                   = "SERIALIZABLE"
 )
 
-func GetIsolationLevelQuery(rdbms Rdbms, isolationLevel int) string {
+// GetIsolationLevelQuery can be used to return a query to retrieve the
+// isolation level for a specific RDBMS
+func GetIsolationLevelQuery(rdbms RDBMS, isolationLevel int) string {
 	switch rdbms {
-	case RdbmsDB2:
-		return baseSetIsolationLevelSqlDb2 + getDb2IsolationLevelString(isolationLevel)
+	case RDBMSDB2:
+		return baseSetIsolationLevelSQLDb2 + getDb2IsolationLevelString(isolationLevel)
 	default:
-		return baseSetIsolationLevelSqlPostgres + getPostgresIsolationLevelString(isolationLevel)
+		return baseSetIsolationLevelSQLPostgres + getPostgresIsolationLevelString(isolationLevel)
 	}
 }
 
-func GetTestQuery(rdbms Rdbms) string {
-	if rdbms == RdbmsDB2 {
+// GetTestQuery can be used to retrieve a test query specific to the rdbms
+func GetTestQuery(rdbms RDBMS) string {
+	if rdbms == RDBMSDB2 {
 		return db2TestQuery
 	}
 	return pgTestQuery
@@ -40,9 +43,8 @@ func getPostgresIsolationLevelString(isolationLevel int) string {
 		return pgReadCommitted
 	} else if isolationLevel == 2 {
 		return pgRepeatableRead
-	} else { // if isolationLevel >= 3
-		return pgSerializable
 	}
+	return pgSerializable
 }
 
 // returns nearest isolation level if provided level is not supported.
@@ -53,7 +55,6 @@ func getDb2IsolationLevelString(isolationLevel int) string {
 		return db2CursorStability
 	} else if isolationLevel == 2 {
 		return db2ReadStability
-	} else { // if isolationLevel >= 3
-		return db2RepeatableRead
 	}
+	return db2RepeatableRead
 }

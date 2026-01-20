@@ -84,9 +84,11 @@ var (
 		"isolationLevel": {short: "i", defValue: "1", argType: typeString, desc: `Transaction isolation level`},
 		"datasource":     {short: "d", defValue: "pg", argType: typeString, desc: `Datasource`},
 		"spread":         {short: "s", argType: typeStringArray, desc: `spread`},
-		"bytesize":       {short: "b", argType: typeString, desc: `What the size of the datasource should be in b, kb, gb, etc.`},
-		"table":          {short: "t", defValue: "dbtwooltests.lobtable", argType: typeString, desc: `What the schema + table name should be`},
-		"parallel":       {short: "p", defValue: 1, argType: typeUInt, desc: `The degree of parallel execution`},
+		"bytesize": {short: "b", argType: typeString,
+			desc: `What the size of the datasource should be in b, kb, gb, etc.`},
+		"table": {short: "t", defValue: "dbtwooltests.lobtable", argType: typeString,
+			desc: `What the schema + table name should be`},
+		"parallel": {short: "p", defValue: 1, argType: typeUInt, desc: `The degree of parallel execution`},
 	}
 )
 
@@ -127,7 +129,8 @@ func (as args) commandArgs(command *cobra.Command, enabledArguments []string) (m
 						defaultValue,
 					))
 			}
-			argConfig.uIntValue = command.PersistentFlags().UintP(key, argConfig.short, uint(defaultValue), argConfig.desc)
+			argConfig.uIntValue = command.PersistentFlags().UintP(key, argConfig.short, uint(defaultValue),
+				argConfig.desc)
 		case typePath, typeString:
 			if defaultFromEnv != "" {
 				argConfig.defValue = defaultFromEnv
@@ -149,7 +152,8 @@ func (as args) commandArgs(command *cobra.Command, enabledArguments []string) (m
 			if argConfig.argType == typePath {
 				defaultValue = path.Join(confDir, defaultValue)
 			}
-			argConfig.stringValue = command.PersistentFlags().StringP(key, argConfig.short, defaultValue, argConfig.desc)
+			argConfig.stringValue = command.PersistentFlags().StringP(key, argConfig.short, defaultValue,
+				argConfig.desc)
 		case typeStringArray:
 			if defaultFromEnv != "" {
 				argConfig.defValue = strings.Split(defaultFromEnv, ",")
@@ -168,13 +172,15 @@ func (as args) commandArgs(command *cobra.Command, enabledArguments []string) (m
 						defaultValue,
 					))
 			}
-			argConfig.stringArrayValue = command.PersistentFlags().StringSliceP(key, argConfig.short, defaultValue, argConfig.desc)
+			argConfig.stringArrayValue = command.PersistentFlags().StringSliceP(key, argConfig.short, defaultValue,
+				argConfig.desc)
 		case typeBool:
 			if defaultFromEnv != "" {
 				var err error
 				argConfig.defValue, err = strconv.ParseBool(defaultFromEnv)
 				if err != nil {
-					panic(fmt.Sprintf("default %s from environment vars %v is not a valid bool", defaultFromEnv, envVars))
+					panic(fmt.Sprintf("default %s from environment vars %v is not a valid bool", defaultFromEnv,
+						envVars))
 				}
 			} else if argConfig.defValue == nil {
 				argConfig.defValue = false

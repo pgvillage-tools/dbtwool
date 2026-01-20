@@ -9,7 +9,7 @@ import (
 // Connection is a wrapper over sql.Conn, so that we can add methods
 type Connection struct {
 	ctx  context.Context
-	conn sql.Conn
+	conn *sql.Conn
 	tx   *sql.Tx
 }
 
@@ -38,7 +38,7 @@ func (c Connection) Query(query string, args ...any) ([]map[string]any, error) {
 
 // QueryOneRow executes a query and expectes one row, or fails. On success it returns the row.
 func (c Connection) QueryOneRow(query string, args ...any) (map[string]any, error) {
-	rows, queryErr := c.Query(query)
+	rows, queryErr := c.Query(query, args...)
 	if queryErr != nil {
 		logger.Fatal().Msgf("error while executing olap query %v", queryErr)
 	}
@@ -112,7 +112,6 @@ func rowsToMaps(rows *sql.Rows) ([]map[string]any, error) {
 			}
 		}
 		results = append(results, rowMap)
-
 	}
 
 	if err := rows.Err(); err != nil {
