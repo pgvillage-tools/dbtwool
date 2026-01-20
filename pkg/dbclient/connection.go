@@ -36,7 +36,7 @@ func (c Connection) Query(query string, args ...any) ([]map[string]any, error) {
 	return rowsToMaps(rows)
 }
 
-// QueryOneRow executes a query and expectes one row, or fails. On success it returns the row.
+// QueryOneRow executes a query and expects one row, or fails. On success it returns the row.
 func (c Connection) QueryOneRow(query string, args ...any) (map[string]any, error) {
 	rows, queryErr := c.Query(query, args...)
 	if queryErr != nil {
@@ -49,7 +49,7 @@ func (c Connection) QueryOneRow(query string, args ...any) (map[string]any, erro
 }
 
 // Begin starts a transaction. In this case there is a one-on-one relation between the transaction and the connection
-func (c Connection) Begin() error {
+func (c *Connection) Begin() error {
 	tx, err := c.conn.BeginTx(c.ctx, nil)
 	if err != nil {
 		return err
@@ -59,7 +59,7 @@ func (c Connection) Begin() error {
 }
 
 // Commit will commit the connection
-func (c Connection) Commit() error {
+func (c *Connection) Commit() error {
 	if c.tx != nil {
 		if err := c.tx.Commit(); err != nil {
 			return err
@@ -70,7 +70,7 @@ func (c Connection) Commit() error {
 }
 
 // Rollback will rollback the transaction
-func (c Connection) Rollback() error {
+func (c *Connection) Rollback() error {
 	if c.tx != nil {
 		if err := c.tx.Rollback(); err != nil {
 			return err

@@ -20,7 +20,7 @@ func consistencyCommand() *cobra.Command {
 				isolationLevel = 1
 			}
 
-			var db2Params dbclient.ConnParams = dbclient.NewDb2ConnparamsFromEnv()
+			var db2Params = dbclient.NewDb2ConnparamsFromEnv()
 
 			cl1 := dbclient.NewClient(db2Params, dbclient.RDBMSDB2)
 			cl1.ConsistencyTest(
@@ -31,7 +31,7 @@ func consistencyCommand() *cobra.Command {
 				"UPDATE gotest.products SET price = 5000 where product_id = 1;",
 			)
 
-			var pgParams dbclient.ConnParams = dbclient.NewPgConnParamsFromEnv()
+			var pgParams = dbclient.NewPgConnParamsFromEnv()
 
 			c2 := dbclient.NewClient(pgParams, dbclient.RDBMSPostgres)
 			c2.ConsistencyTest(

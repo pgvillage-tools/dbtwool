@@ -65,7 +65,9 @@ func initLogger(logFilePath string) {
 	log = zap.New(core).Sugar()
 }
 
+/*
 func setVerbosity(verbosity int) {
 	atom.SetLevel(zap.ErrorLevel - zapcore.Level(verbosity))
 	log.Debug("Debug logging enabled")
 }
+*/

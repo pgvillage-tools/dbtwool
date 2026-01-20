@@ -43,7 +43,8 @@ func TestAbsolutePath(t *testing.T) {
 
 	filePath := filepath.Join(tmpDir, "file")
 	t.Logf("writing %s to file %s", "some data", filePath)
-	if err = os.WriteFile(filePath, []byte("some data"), 0o600); err != nil {
+	const rw = 0o600
+	if err = os.WriteFile(filePath, []byte("some data"), rw); err != nil {
 		panic(fmt.Errorf("unable to create %s temp file: %w", filePath, err))
 	}
 
@@ -67,11 +68,9 @@ func TestAbsolutePath(t *testing.T) {
 		if a.isError {
 			assert.Error(t, err, "should not be able to resolve %s to a absolute path")
 			assert.Equal(t, "", absPatch, "%s should resolve to %s", a.expected, a.input)
-
 		} else {
 			assert.NoError(t, err, "should be able to resolve %s to a absolute path")
 			assert.Equal(t, a.expected, absPatch, "%s should resolve to %s", a.expected, a.input)
-
 		}
 	}
 }
