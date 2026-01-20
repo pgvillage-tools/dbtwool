@@ -57,9 +57,11 @@ func createApp() *cobra.Command {
 	// var appArgs args
 	cobra.OnInitialize(initConfig)
 	rootCmd := &cobra.Command{
-		Use:               "dbtwool",
-		Short:             "Run tests against DB2 and PostgreSQL",
-		Long:              `Lorem ipsum ...`,
+		Use:   "dbtwool",
+		Short: "Run tests against DB2 and PostgreSQL",
+		Long: strings.Join([]string{
+			`dbtwool can be used to generate testdata and run tests against",
+			"PostgreSQL and DB2`}, " "),
 		RunE:              requireSubcommand,
 		CompletionOptions: cobra.CompletionOptions{},
 		TraverseChildren:  true,

@@ -88,7 +88,7 @@ var (
 			desc: `What the size of the datasource should be in b, kb, gb, etc.`},
 		"table": {short: "t", defValue: "dbtwooltests.lobtable", argType: typeString,
 			desc: `What the schema + table name should be`},
-		"parallel": {short: "p", defValue: 1, argType: typeUInt, desc: `The degree of parallel execution`},
+		"parallel": {short: "p", defValue: uint(1), argType: typeUInt, desc: `The degree of parallel execution`},
 	}
 )
 
@@ -96,13 +96,21 @@ func handleUintCommandArg(key string, argConfig *arg) (uint, error) {
 	envVars := append(argConfig.extraEnvVars, "PGC_"+strings.ToUpper(toSnakeCase(key)))
 	defaultFromEnv := fromEnv(envVars)
 	if defaultFromEnv != "" {
-		var err error
-		argConfig.defValue, err = strconv.Atoi(defaultFromEnv)
+		var (
+			err    error
+			defVal uint64
+		)
+		const (
+			baseTen   = 10
+			fourBytes = 32
+		)
+		defVal, err = strconv.ParseUint(defaultFromEnv, baseTen, fourBytes)
 		if err != nil {
 			return 0, fmt.Errorf("default from environment (%v) is invalid as int", defaultFromEnv)
 		}
+		argConfig.defValue = uint(defVal)
 	} else if argConfig.defValue == nil {
-		argConfig.defValue = 0
+		argConfig.defValue = uint(0)
 	}
 	defaultValue, ok := argConfig.defValue.(uint)
 	if !ok {
