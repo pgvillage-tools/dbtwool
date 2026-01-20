@@ -113,6 +113,21 @@ jobs:
         uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
         with:
           go-version: ${{ env.GOLANG_VERSION }}
+      - name: Install IBM DB2 Driver
+        run: |
+          mkdir $HOME/goapp
+          cd $HOME/goapp
+          git clone https://github.com/ibmdb/go_ibm_db/
+          go env GOPATH
+          cd go_ibm_db/installer
+          go run ./setup.go
+          source ./setenv.sh
+          find $IBM_DB_HOME
+
+          echo "IBM_DB_HOME=$IBM_DB_HOME" >> $GITHUB_ENV
+          echo "CGO_CFLAGS=-I$IBM_DB_HOME/include" >> $GITHUB_ENV
+          echo "CGO_LDFLAGS=-L$IBM_DB_HOME/lib" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=$IBM_DB_HOME/lib" >> $GITHUB_ENV
       - name: Test
         run: make test
       - name: check test coverage
