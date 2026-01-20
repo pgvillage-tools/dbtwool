@@ -16,7 +16,7 @@ jobs:
     outputs:
       backend: ${{ steps.filter.outputs.backend_any_changed }}
     steps:
-      - uses: actions/checkout@8410ad0602e1e429cee44a835ae9f77f654a6694 # v4.0.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: tj-actions/changed-files@e9772d140489982e0e3704fea5ee93d536f1e275 # v45.0.1
         id: filter
         with:
@@ -31,11 +31,12 @@ jobs:
   check-go:
     name: Ensure Go modules synchronicity
     runs-on: ubuntu-22.04
+    if: ${{ needs.codechanges.outputs.backend == 'true' }}
     needs:
       - codechanges
     steps:
       - name: Checkout code
-        uses: actions/checkout@8410ad0602e1e429cee44a835ae9f77f654a6694 # v4.0.0
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Setup Golang
         uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
         with:
@@ -51,6 +52,7 @@ jobs:
   lint-go:
     name: Lint Go code
     runs-on: ubuntu-22.04
+    if: ${{ needs.codechanges.outputs.backend == 'true' }}
     needs:
       - codechanges
     permissions:
@@ -58,7 +60,7 @@ jobs:
       pull-requests: read # for golangci/golangci-lint-action to fetch pull requests
     steps:
       - name: Checkout code
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4.0.0
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Setup Golang
         uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
         with:
@@ -94,9 +96,9 @@ jobs:
     name: Shellcheck
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Run ShellCheck
-        uses: ludeeus/action-shellcheck@master
+        uses: ludeeus/action-shellcheck@00cae500b08a931fb5698e11e79bfbd38e612a38 # v2.0.0
 
   unit-test:
     name: Run unit tests
@@ -105,10 +107,11 @@ jobs:
     needs:
       - codechanges
     permissions:
+      contents: read
       pull-requests: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4.0.0
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Setup Golang
         uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
         with:
@@ -153,11 +156,12 @@ jobs:
             echo "No open pull request found for this branch."
           fi
       - name: create badge
+        if: github.ref_name == 'main'
         uses: vladopajic/go-test-coverage@v2
         with:
           profile: cover.out
           threshold-total: 2
-          git-token: ${{ github.ref_name == 'main' && secrets.GITHUB_TOKEN || '' }}
+          git-token: ${{ secrets.GITHUB_TOKEN || '' }}
           git-branch: badges
       - name: post coverage report
         if: env.pull_request_id

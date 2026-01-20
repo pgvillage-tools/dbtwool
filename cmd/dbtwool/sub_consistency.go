@@ -17,10 +17,11 @@ func consistencyCommand() *cobra.Command {
 		Run: func(_ *cobra.Command, _ []string) {
 			isolationLevel, err := strconv.Atoi(consistencyArgs.GetString("isolationLevel"))
 			if err != nil {
+				log.Info("Warning: invalid isolationLevel, defaulting to 1")
 				isolationLevel = 1
 			}
 
-			var db2Params = dbclient.NewDb2ConnparamsFromEnv()
+			var db2Params = dbclient.NewDB2ConnparamsFromEnv()
 
 			cl1 := dbclient.NewClient(db2Params, dbclient.RDBMSDB2)
 			cl1.ConsistencyTest(

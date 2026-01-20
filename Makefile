@@ -10,10 +10,10 @@ build:
 
 debug:
 	go build -gcflags "all=-N -l" ./cmd/pgroute66
-	~/go/bin/dlv --headless --listen=:2345 --api-version=2 --accept-multiclient exec ./pgroute66 -- -c ./config/pgroute66_local.yaml
+	${GOBIN}/dlv --headless --listen=:2345 --api-version=2 --accept-multiclient exec ./pgroute66 -- -c ./config/pgroute66_local.yaml
 
 fmt:
-	golangci-lint run -f
+	golangci-lint run --fix
 	gofmt -w .
 	gofumpt -l -w .
 	goimports -w .

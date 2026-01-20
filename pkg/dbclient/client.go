@@ -72,7 +72,7 @@ func (cl Client) ConsistencyTest(
 
 	conn2, connectErr2 := pool.Connect(ctx)
 	if connectErr2 != nil {
-		logger.Fatal().Msgf("connect error for connection 1: %e", connectErr1)
+		logger.Fatal().Msgf("connect error for connection 1: %e", connectErr2)
 	}
 	defer conn2.Close()
 

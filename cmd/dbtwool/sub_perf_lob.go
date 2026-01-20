@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -11,11 +10,9 @@ func lobPerformanceCommand() *cobra.Command {
 	lobPerformanceCommand := &cobra.Command{
 		Use:   "lob-performance",
 		Short: "test db performance with large objects",
-		Long: strings.Join([]string{
-			"Use this command to create a testenvironment",
-			"create a workload",
+		Long: "Use this command to create a test environment, " +
+			"create a workload, " +
 			"and execute a performance test for large objects.",
-		}, ", "),
 		RunE: requireSubcommand,
 	}
 

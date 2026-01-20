@@ -10,7 +10,7 @@ const (
 	RDBMSPostgres RDBMS = "postgres"
 )
 
-// RDBMSDrivers maps a driver name to an RDBMS name
+// RDBMSDrivers maps an RDBMS enum to its driver name
 var RDBMSDrivers = map[RDBMS]string{
 	RDBMSDB2:      "go_ibm_db",
 	RDBMSPostgres: "pgx",

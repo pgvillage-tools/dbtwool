@@ -11,7 +11,10 @@ import (
 // ResolveHome can resolve the home folder of the current user
 func ResolveHome(path string) string {
 	if strings.HasPrefix(path, "~/") {
-		home, _ := os.UserHomeDir()
+		home, err := os.UserHomeDir()
+		if err != nil {
+			panic(err)
+		}
 		return filepath.Join(home, path[2:])
 	}
 	return filepath.Clean(path)

@@ -23,7 +23,7 @@ const (
 func GetIsolationLevelQuery(rdbms RDBMS, isolationLevel int) string {
 	switch rdbms {
 	case RDBMSDB2:
-		return baseSetIsolationLevelSQLDb2 + getDb2IsolationLevelString(isolationLevel)
+		return baseSetIsolationLevelSQLDb2 + getDB2IsolationLevelString(isolationLevel)
 	default:
 		return baseSetIsolationLevelSQLPostgres + getPostgresIsolationLevelString(isolationLevel)
 	}
@@ -48,7 +48,7 @@ func getPostgresIsolationLevelString(isolationLevel int) string {
 }
 
 // returns nearest isolation level if provided level is not supported.
-func getDb2IsolationLevelString(isolationLevel int) string {
+func getDB2IsolationLevelString(isolationLevel int) string {
 	if isolationLevel <= 0 {
 		return db2UncommittedRead
 	} else if isolationLevel == 1 {

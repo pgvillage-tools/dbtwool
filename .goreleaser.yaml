@@ -32,7 +32,7 @@ builds:
     main: ./cmd/dbtwool
     binary: dbtwool
     ldflags:
-      - -s -w -X "internal.appVersion={{.Version}}"
+      - -s -w -X "github.com/pgvillage-tools/dbtwool/internal/version.appVersion={{.Version}}"
 
 archives:
   - format: tar.gz
