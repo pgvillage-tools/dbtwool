@@ -27,11 +27,26 @@ func requireSubcommand(cmd *cobra.Command, args []string) error {
 	if len(args) > 0 {
 		suggestions := cmd.SuggestionsFor(args[0])
 		if len(suggestions) == 0 {
-			return fmt.Errorf("unrecognized command `%[1]s %[2]s`\nTry '%[1]s --help' for more information", cmd.CommandPath(), args[0])
+			return fmt.Errorf("unrecognized command `%[1]s %[2]s`\nTry '%[1]s --help' for more information",
+				cmd.CommandPath(), args[0])
 		}
-		return fmt.Errorf("unrecognized command `%[1]s %[2]s`\n\nDid you mean this?\n\t%[3]s\n\nTry '%[1]s --help' for more information", cmd.CommandPath(), args[0], strings.Join(suggestions, "\n\t"))
+		return fmt.Errorf(strings.Join(
+			[]string{"unrecognized command `%[1]s %[2]s`",
+				"",
+				"Did you mean this?",
+				"\t%[3]s",
+				"",
+				"Try '%[1]s --help' for more information"}, "\n"),
+			cmd.CommandPath(),
+			args[0],
+			strings.Join(suggestions, "\n\t"))
 	}
-	return fmt.Errorf("missing command '%[1]s COMMAND'\nTry '%[1]s --help' for more information", cmd.CommandPath())
+	return fmt.Errorf(
+		strings.Join([]string{
+			"missing command '%[1]s COMMAND'",
+			"Try '%[1]s --help' for more information",
+		}, "\n"),
+		cmd.CommandPath())
 }
 
 // createApp returns either a validly formed command for main() to run, or
@@ -42,15 +57,17 @@ func createApp() *cobra.Command {
 	// var appArgs args
 	cobra.OnInitialize(initConfig)
 	rootCmd := &cobra.Command{
-		Use:               "dbtwool",
-		Short:             "Run tests against DB2 and PostgreSQL",
-		Long:              `Lorem ipsum ...`,
+		Use:   "dbtwool",
+		Short: "Run tests against DB2 and PostgreSQL",
+		Long: strings.Join([]string{
+			`dbtwool can be used to generate testdata and run tests against",
+			"PostgreSQL and DB2`}, " "),
 		RunE:              requireSubcommand,
 		CompletionOptions: cobra.CompletionOptions{},
 		TraverseChildren:  true,
 		Version:           version.GetAppVersion(),
-		//SilenceErrors: true,
-		//SilenceUsage: true,
+		// SilenceErrors: true,
+		// SilenceUsage: true,
 	}
 
 	viper.AddConfigPath(viper.GetString("cfgFile"))

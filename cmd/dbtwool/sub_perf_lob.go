@@ -10,8 +10,10 @@ func lobPerformanceCommand() *cobra.Command {
 	lobPerformanceCommand := &cobra.Command{
 		Use:   "lob-performance",
 		Short: "test db performance with large objects",
-		Long:  "Use this command to create a testenvironment, create a workload, and execute a performance test for large objects.",
-		RunE:  requireSubcommand,
+		Long: "Use this command to create a test environment, " +
+			"create a workload, " +
+			"and execute a performance test for large objects.",
+		RunE: requireSubcommand,
 	}
 
 	lobPerformanceCommand.AddCommand(
@@ -50,6 +52,7 @@ func lobStageCommand() *cobra.Command {
 		Run: func(_ *cobra.Command, _ []string) {
 			fmt.Println("stage:" + stageArgs.GetString("table"))
 			fmt.Println("stage:" + stageArgs.GetString("datasource"))
+			fmt.Println("stage:" + stageArgs.GetString("cfgFile"))
 		},
 	}
 

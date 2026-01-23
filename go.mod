@@ -1,6 +1,6 @@
 module github.com/pgvillage-tools/dbtwool
 
-go 1.23.0
+go 1.24.0
 
 require (
 	github.com/ibmdb/go_ibm_db v0.5.4

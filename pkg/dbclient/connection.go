@@ -9,17 +9,17 @@ import (
 // Connection is a wrapper over sql.Conn, so that we can add methods
 type Connection struct {
 	ctx  context.Context
-	conn sql.Conn
+	conn *sql.Conn
 	tx   *sql.Tx
 }
 
 // Close closes the connection
-func (c Connection) Close() error {
+func (c *Connection) Close() error {
 	return c.conn.Close()
 }
 
 // Execute will execute a query and return number of affected rows
-func (c Connection) Execute(query string) (int64, error) {
+func (c *Connection) Execute(query string) (int64, error) {
 	r, err := c.conn.ExecContext(c.ctx, query)
 	if err != nil {
 		return 0, err
@@ -28,7 +28,7 @@ func (c Connection) Execute(query string) (int64, error) {
 }
 
 // Query will execute a query and return a list of maps where every list item is a row and every map item is a column
-func (c Connection) Query(query string, args ...any) ([]map[string]any, error) {
+func (c *Connection) Query(query string, args ...any) ([]map[string]any, error) {
 	rows, err := c.conn.QueryContext(c.ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -36,9 +36,9 @@ func (c Connection) Query(query string, args ...any) ([]map[string]any, error) {
 	return rowsToMaps(rows)
 }
 
-// QueryOneRow executes a query and expectes one row, or fails. On success it returns the row.
-func (c Connection) QueryOneRow(query string, args ...any) (map[string]any, error) {
-	rows, queryErr := c.Query(query)
+// QueryOneRow executes a query and expects one row, or fails. On success it returns the row.
+func (c *Connection) QueryOneRow(query string, args ...any) (map[string]any, error) {
+	rows, queryErr := c.Query(query, args...)
 	if queryErr != nil {
 		logger.Fatal().Msgf("error while executing olap query %v", queryErr)
 	}
@@ -49,7 +49,7 @@ func (c Connection) QueryOneRow(query string, args ...any) (map[string]any, erro
 }
 
 // Begin starts a transaction. In this case there is a one-on-one relation between the transaction and the connection
-func (c Connection) Begin() error {
+func (c *Connection) Begin() error {
 	tx, err := c.conn.BeginTx(c.ctx, nil)
 	if err != nil {
 		return err
@@ -59,7 +59,7 @@ func (c Connection) Begin() error {
 }
 
 // Commit will commit the connection
-func (c Connection) Commit() error {
+func (c *Connection) Commit() error {
 	if c.tx != nil {
 		if err := c.tx.Commit(); err != nil {
 			return err
@@ -70,7 +70,7 @@ func (c Connection) Commit() error {
 }
 
 // Rollback will rollback the transaction
-func (c Connection) Rollback() error {
+func (c *Connection) Rollback() error {
 	if c.tx != nil {
 		if err := c.tx.Rollback(); err != nil {
 			return err
@@ -112,7 +112,6 @@ func rowsToMaps(rows *sql.Rows) ([]map[string]any, error) {
 			}
 		}
 		results = append(results, rowMap)
-
 	}
 
 	if err := rows.Err(); err != nil {

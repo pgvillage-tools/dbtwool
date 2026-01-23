@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -84,11 +84,124 @@ var (
 		"isolationLevel": {short: "i", defValue: "1", argType: typeString, desc: `Transaction isolation level`},
 		"datasource":     {short: "d", defValue: "pg", argType: typeString, desc: `Datasource`},
 		"spread":         {short: "s", argType: typeStringArray, desc: `spread`},
-		"bytesize":       {short: "b", argType: typeString, desc: `What the size of the datasource should be in b, kb, gb, etc.`},
-		"table":          {short: "t", defValue: "dbtwooltests.lobtable", argType: typeString, desc: `What the schema + table name should be`},
-		"parallel":       {short: "p", defValue: 1, argType: typeUInt, desc: `The degree of parallel execution`},
+		"bytesize": {short: "b", argType: typeString,
+			desc: `What the size of the datasource should be in b, kb, gb, etc.`},
+		"table": {short: "t", defValue: "dbtwooltests.lobtable", argType: typeString,
+			desc: `What the schema + table name should be`},
+		"parallel": {short: "p", defValue: uint(1), argType: typeUInt, desc: `The degree of parallel execution`},
 	}
 )
+
+func handleUintCommandArg(key string, argConfig *arg) (uint, error) {
+	envVars := append(argConfig.extraEnvVars, "PGC_"+strings.ToUpper(toSnakeCase(key)))
+	defaultFromEnv := fromEnv(envVars)
+	if defaultFromEnv != "" {
+		var (
+			err    error
+			defVal uint64
+		)
+		const (
+			baseTen   = 10
+			fourBytes = 32
+		)
+		defVal, err = strconv.ParseUint(defaultFromEnv, baseTen, fourBytes)
+		if err != nil {
+			return 0, fmt.Errorf("default from environment (%v) is invalid as int", defaultFromEnv)
+		}
+		argConfig.defValue = uint(defVal)
+	} else if argConfig.defValue == nil {
+		argConfig.defValue = uint(0)
+	}
+	defaultValue, ok := argConfig.defValue.(uint)
+	if !ok {
+		return 0,
+			fmt.Errorf(
+				"requested argument %s is %s, but %v (%T) cannot be parsed to %T",
+				key,
+				argConfig.argType.String(),
+				argConfig.defValue,
+				argConfig.defValue,
+				defaultValue,
+			)
+	}
+	return defaultValue, nil
+}
+
+func handleStringCommandArg(key string, argConfig *arg) (string, error) {
+	envVars := append(argConfig.extraEnvVars, "PGC_"+strings.ToUpper(toSnakeCase(key)))
+	defaultFromEnv := fromEnv(envVars)
+	fromEnvOverride := defaultFromEnv != ""
+	if fromEnvOverride {
+		argConfig.defValue = defaultFromEnv
+	} else if argConfig.defValue == nil {
+		argConfig.defValue = ""
+	}
+	defaultValue, ok := argConfig.defValue.(string)
+	if !ok {
+		return "", fmt.Errorf(
+			"requested argument %s is %s, but %v (%T) cannot be parsed to %T",
+			key,
+			argConfig.argType.String(),
+			argConfig.defValue,
+			argConfig.defValue,
+			defaultValue,
+		)
+	}
+	if argConfig.argType == typePath && !fromEnvOverride {
+		defaultValue = filepath.Join(confDir, defaultValue)
+	}
+	return defaultValue, nil
+}
+
+func handleStringArrayCommandArg(key string, argConfig *arg) ([]string, error) {
+	envVars := append(argConfig.extraEnvVars, "PGC_"+strings.ToUpper(toSnakeCase(key)))
+	defaultFromEnv := fromEnv(envVars)
+	if defaultFromEnv != "" {
+		argConfig.defValue = strings.Split(defaultFromEnv, ",")
+	} else if argConfig.defValue == nil {
+		argConfig.defValue = []string{}
+	}
+	defaultValue, ok := argConfig.defValue.([]string)
+	if !ok {
+		return nil,
+			fmt.Errorf(
+				"requested argument %s is %s, but %v (%T) cannot be parsed to %T",
+				key,
+				argConfig.argType.String(),
+				argConfig.defValue,
+				argConfig.defValue,
+				defaultValue,
+			)
+	}
+	return defaultValue, nil
+}
+
+func handleBoolCommandArg(key string, argConfig *arg) (bool, error) {
+	envVars := append(argConfig.extraEnvVars, "PGC_"+strings.ToUpper(toSnakeCase(key)))
+	defaultFromEnv := fromEnv(envVars)
+	if defaultFromEnv != "" {
+		var err error
+		argConfig.defValue, err = strconv.ParseBool(defaultFromEnv)
+		if err != nil {
+			return false, fmt.Errorf("default %s from environment is not a valid bool", defaultFromEnv)
+		}
+	} else if argConfig.defValue == nil {
+		argConfig.defValue = false
+	}
+	defaultValue, ok := argConfig.defValue.(bool)
+	if !ok {
+		return false,
+			fmt.Errorf(
+				"requested argument %s is %s, but %v (%T) cannot be parsed to %T",
+				key,
+				argConfig.argType.String(),
+				argConfig.defValue,
+				argConfig.defValue,
+				defaultValue,
+			)
+	}
+	return defaultValue, nil
+}
 
 func (as args) commandArgs(command *cobra.Command, enabledArguments []string) (myArgs args) {
 	myArgs = args{}
@@ -100,96 +213,34 @@ func (as args) commandArgs(command *cobra.Command, enabledArguments []string) (m
 		if !exists {
 			panic(fmt.Sprintf("requested argument %s does not seem to exist", key))
 		}
-		envVars := append(argConfig.extraEnvVars, "PGC_"+strings.ToUpper(toSnakeCase(key)))
-		defaultFromEnv := fromEnv(envVars)
 		switch argConfig.argType {
 		case typeCount:
 			argConfig.intValue = command.PersistentFlags().CountP(key, argConfig.short, argConfig.desc)
 		case typeUInt:
-			if defaultFromEnv != "" {
-				var err error
-				argConfig.defValue, err = strconv.Atoi(defaultFromEnv)
-				if err != nil {
-					panic(fmt.Sprintf("default from environment (%v) is invalid as int", envVars))
-				}
-			} else if argConfig.defValue == nil {
-				argConfig.defValue = 0
+			defaultValue, err := handleUintCommandArg(key, &argConfig)
+			if err != nil {
+				panic(err)
 			}
-			defaultValue, ok := argConfig.defValue.(int)
-			if !ok {
-				panic(
-					fmt.Sprintf(
-						"requested argument %s is %s, but %v (%T) cannot be parsed to %T",
-						key,
-						argConfig.argType.String(),
-						argConfig.defValue,
-						argConfig.defValue,
-						defaultValue,
-					))
-			}
-			argConfig.uIntValue = command.PersistentFlags().UintP(key, argConfig.short, uint(defaultValue), argConfig.desc)
+			argConfig.uIntValue = command.PersistentFlags().UintP(key, argConfig.short, defaultValue,
+				argConfig.desc)
 		case typePath, typeString:
-			if defaultFromEnv != "" {
-				argConfig.defValue = defaultFromEnv
-			} else if argConfig.defValue == nil {
-				argConfig.defValue = ""
+			defaultValue, err := handleStringCommandArg(key, &argConfig)
+			if err != nil {
+				panic(err)
 			}
-			defaultValue, ok := argConfig.defValue.(string)
-			if !ok {
-				panic(
-					fmt.Sprintf(
-						"requested argument %s is %s, but %v (%T) cannot be parsed to %T",
-						key,
-						argConfig.argType.String(),
-						argConfig.defValue,
-						argConfig.defValue,
-						defaultValue,
-					))
-			}
-			if argConfig.argType == typePath {
-				defaultValue = path.Join(confDir, defaultValue)
-			}
-			argConfig.stringValue = command.PersistentFlags().StringP(key, argConfig.short, defaultValue, argConfig.desc)
+			argConfig.stringValue = command.PersistentFlags().StringP(key, argConfig.short, defaultValue,
+				argConfig.desc)
 		case typeStringArray:
-			if defaultFromEnv != "" {
-				argConfig.defValue = strings.Split(defaultFromEnv, ",")
-			} else if argConfig.defValue == nil {
-				argConfig.defValue = []string{}
+			defaultValue, err := handleStringArrayCommandArg(key, &argConfig)
+			if err != nil {
+				panic(err)
 			}
-			defaultValue, ok := argConfig.defValue.([]string)
-			if !ok {
-				panic(
-					fmt.Sprintf(
-						"requested argument %s is %s, but %v (%T) cannot be parsed to %T",
-						key,
-						argConfig.argType.String(),
-						argConfig.defValue,
-						argConfig.defValue,
-						defaultValue,
-					))
-			}
-			argConfig.stringArrayValue = command.PersistentFlags().StringSliceP(key, argConfig.short, defaultValue, argConfig.desc)
+			argConfig.stringArrayValue = command.PersistentFlags().StringSliceP(key, argConfig.short, defaultValue,
+				argConfig.desc)
 		case typeBool:
-			if defaultFromEnv != "" {
-				var err error
-				argConfig.defValue, err = strconv.ParseBool(defaultFromEnv)
-				if err != nil {
-					panic(fmt.Sprintf("default %s from environment vars %v is not a valid bool", defaultFromEnv, envVars))
-				}
-			} else if argConfig.defValue == nil {
-				argConfig.defValue = false
-			}
-			defaultValue, ok := argConfig.defValue.(bool)
-			if !ok {
-				panic(
-					fmt.Sprintf(
-						"requested argument %s is %s, but %v (%T) cannot be parsed to %T",
-						key,
-						argConfig.argType.String(),
-						argConfig.defValue,
-						argConfig.defValue,
-						defaultValue,
-					))
+			defaultValue, err := handleBoolCommandArg(key, &argConfig)
+			if err != nil {
+				panic(err)
 			}
 			argConfig.boolValue = command.PersistentFlags().BoolP(key, argConfig.short, defaultValue, argConfig.desc)
 		}
