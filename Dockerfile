@@ -29,7 +29,7 @@ RUN go install github.com/ibmdb/go_ibm_db/installer@latest
 ENV IBM_DB_HOME=/root/go/pkg/mod/github.com/ibmdb/clidriver
 ENV CGO_CFLAGS="-I${IBM_DB_HOME}/include"
 ENV CGO_LDFLAGS="-L${IBM_DB_HOME}/lib"
-ENV LD_LIBRARY_PATH="${IBM_DB_HOME}/lib:${LD_LIBRARY_PATH}
+ENV LD_LIBRARY_PATH="${IBM_DB_HOME}/lib:${LD_LIBRARY_PATH}"
 
 RUN /root/go/bin/installer || true
 
