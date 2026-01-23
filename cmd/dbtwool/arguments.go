@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -130,25 +130,25 @@ func handleUintCommandArg(key string, argConfig *arg) (uint, error) {
 func handleStringCommandArg(key string, argConfig *arg) (string, error) {
 	envVars := append(argConfig.extraEnvVars, "PGC_"+strings.ToUpper(toSnakeCase(key)))
 	defaultFromEnv := fromEnv(envVars)
-	if defaultFromEnv != "" {
+	fromEnvOverride := defaultFromEnv != ""
+	if fromEnvOverride {
 		argConfig.defValue = defaultFromEnv
 	} else if argConfig.defValue == nil {
 		argConfig.defValue = ""
 	}
 	defaultValue, ok := argConfig.defValue.(string)
 	if !ok {
-		return "",
-			fmt.Errorf(
-				"requested argument %s is %s, but %v (%T) cannot be parsed to %T",
-				key,
-				argConfig.argType.String(),
-				argConfig.defValue,
-				argConfig.defValue,
-				defaultValue,
-			)
+		return "", fmt.Errorf(
+			"requested argument %s is %s, but %v (%T) cannot be parsed to %T",
+			key,
+			argConfig.argType.String(),
+			argConfig.defValue,
+			argConfig.defValue,
+			defaultValue,
+		)
 	}
-	if argConfig.argType == typePath {
-		defaultValue = path.Join(confDir, defaultValue)
+	if argConfig.argType == typePath && !fromEnvOverride {
+		defaultValue = filepath.Join(confDir, defaultValue)
 	}
 	return defaultValue, nil
 }

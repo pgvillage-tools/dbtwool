@@ -52,6 +52,7 @@ func lobStageCommand() *cobra.Command {
 		Run: func(_ *cobra.Command, _ []string) {
 			fmt.Println("stage:" + stageArgs.GetString("table"))
 			fmt.Println("stage:" + stageArgs.GetString("datasource"))
+			fmt.Println("stage:" + stageArgs.GetString("cfgFile"))
 		},
 	}
 
