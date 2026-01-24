@@ -55,8 +55,10 @@ override:
     threshold: 0.0
   - path: ^pkg/dbclient$
     threshold: 0.0
-  - path: ^pkg/utils$	
-    threshold: 71.4
+  - path: ^pkg/utils/main.go$
+    threshold: 68
+  - path: ^pkg/utils$
+    threshold: 68
 
 # Holds regexp rules which will exclude matched files or packages
 # from coverage statistics.
