@@ -4,7 +4,6 @@ package dbclient
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"time"
 
 	// importing db drivers so that database/sql can use it
@@ -99,7 +98,7 @@ func (cl Client) ConsistencyTest(
 	}
 
 	// Lock rows
-	logSinceElapsed(fmt.Sprintf("T1: %s", oltpLockQuery))
+	logSinceElapsed("T1: %s", oltpLockQuery)
 	if _, err := conn1.Execute(oltpLockQuery); err != nil {
 		logger.Fatal().Err(err)
 	}
@@ -111,7 +110,7 @@ func (cl Client) ConsistencyTest(
 			logger.Fatal().Msgf("error during begin transaction: %v", err)
 		}
 
-		logSinceElapsed(fmt.Sprintf("T2: %s", olapQuery))
+		logSinceElapsed("T2: %s", olapQuery)
 		if row, err := conn2.QueryOneRow(olapQuery); err != nil {
 			logger.Fatal().Msgf("error during fetch of olap query: %v", err)
 		} else {
@@ -121,7 +120,7 @@ func (cl Client) ConsistencyTest(
 	}()
 
 	// Update
-	logSinceElapsed(fmt.Sprintf("T1: %s", oltpUpdateQuery))
+	logSinceElapsed("T1: %s", oltpUpdateQuery)
 	if _, err := conn1.Execute(oltpUpdateQuery); err != nil {
 		logger.Fatal().Err(err)
 	}

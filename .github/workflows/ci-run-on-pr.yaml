@@ -27,6 +27,8 @@ jobs:
               - go.sum
               - '**.go'
               - '.github/workflows/ci-run-on-pr.yaml'
+            unittest:
+              - .testcoverage.yaml
 
   check-go:
     name: Ensure Go modules synchronicity
@@ -103,7 +105,7 @@ jobs:
   unit-test:
     name: Run unit tests
     runs-on: ubuntu-latest
-    if: ${{ needs.codechanges.outputs.backend == 'true' && github.event.pull_request.draft == false}}
+    if: ${{ needs.codechanges.outputs.backend == 'true' || needs.codechanges.outputs.unittest == 'true'}}
     needs:
       - codechanges
     permissions:
