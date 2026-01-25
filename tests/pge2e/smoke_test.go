@@ -84,11 +84,10 @@ var _ = Describe("Smoke", Ordered, func() {
 						nw,
 						pgEnv,
 						jobType, phase)
+					logErr := debugContainerLogs(ctx, dbtwoolCnt)
+					Ω(logErr).NotTo(HaveOccurred())
 					Ω(initErr).NotTo(HaveOccurred())
 					allContainers = append(allContainers, dbtwoolCnt)
-					dbtwoolLogs, logErr := containerLogs(ctx, dbtwoolCnt)
-					Ω(logErr).NotTo(HaveOccurred())
-					fmt.Println("Container logs:", dbtwoolLogs)
 				}
 			}
 		})
