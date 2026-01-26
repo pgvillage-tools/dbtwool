@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pgvillage-tools/dbtwool/pkg/dbclient"
-	"github.com/pgvillage-tools/dbtwool/pkg/lobperformance"
 	"github.com/spf13/cobra"
 )
 
@@ -13,8 +11,10 @@ func lobPerformanceCommand() *cobra.Command {
 	lobPerformanceCommand := &cobra.Command{
 		Use:   "lob-performance",
 		Short: "test db performance with large objects",
-		Long:  "Use this command to create a testenvironment, create a workload, and execute a performance test for large objects.",
-		RunE:  requireSubcommand,
+		Long: "Use this command to create a test environment, " +
+			"create a workload, " +
+			"and execute a performance test for large objects.",
+		RunE: requireSubcommand,
 	}
 
 	lobPerformanceCommand.AddCommand(
@@ -54,14 +54,7 @@ func lobStageCommand() *cobra.Command {
 		Run: func(_ *cobra.Command, _ []string) {
 			fmt.Println("stage:" + stageArgs.GetString("table"))
 			fmt.Println("stage:" + stageArgs.GetString("datasource"))
-
-			schema, table, err := parseSchemaTable(stageArgs.GetString("table"))
-
-			if err == nil {
-				lobperformance.LobPerformanceStage(dbclient.GetRdbmsFromString(stageArgs.GetString("datasource")), schema, table)
-			} else {
-				fmt.Println("An error occurred while parsing the schema + table: %e", err)
-			}
+			fmt.Println("stage:" + stageArgs.GetString("cfgFile"))
 		},
 	}
 
