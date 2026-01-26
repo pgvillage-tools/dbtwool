@@ -21,7 +21,7 @@ fmt:
 
 .PHONY: test
 test: ## Run tests.
-	go test $$(go list ./... | grep -v /e2e) -coverprofile cover.out
+	go test $$(go list ./... | grep -v e2e) -coverprofile cover.out
 
 .PHONY: install-go-test-coverage
 install-go-test-coverage:
@@ -29,5 +29,15 @@ install-go-test-coverage:
 
 .PHONY: check-coverage
 check-coverage: install-go-test-coverage
-	go test $$(go list ./... | grep -v /e2e) -coverprofile=./cover.out -covermode=atomic -coverpkg=./...
+	go test $$(go list ./... | grep -v e2e) -coverprofile=./cover.out -covermode=atomic -coverpkg=./...
 	${GOBIN}/go-test-coverage --config=./.testcoverage.yaml
+
+e2e-test: db2e2e-test pge2e-test
+
+.PHONY: db2-e2e-test
+db2e2e-test: ## Run tests.
+	go test -v ./tests/db2e2e
+
+.PHONY: pg-e2e-test
+pge2e-test: ## Run tests.
+	go test -v ./tests/pge2e
