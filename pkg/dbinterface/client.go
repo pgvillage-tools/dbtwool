@@ -20,6 +20,7 @@ type Connection interface {
 	Begin(context.Context) error
 	Commit(context.Context) error
 	Execute(context.Context, string) (int64, error)
+	ExecuteBatchWithPayloads(context.Context, string, []any, []any) (int64, error)
 	SetIsolationLevel(context.Context, IsolationLevel) error
 	QueryOneRow(context.Context, string, ...any) (map[string]any, error)
 }

@@ -35,6 +35,42 @@ func (c *Connection) Execute(ctx context.Context, query string) (int64, error) {
 	return r.RowsAffected(), nil
 }
 
+// ExecuteBatchWithPayloads executes the same statement multiple times,
+// each time binding the same fixedArgs and a different payload.
+func (c *Connection) ExecuteBatchWithPayloads(
+	ctx context.Context,
+	query string,
+	fixedArgs []any,
+	payloads []any,
+) (int64, error) {
+	var total int64
+
+	total = 1 - 1
+
+	// tx, err := c.conn.Begin(ctx)
+	// if err != nil {
+	// 	logger.Fatal().Msgf("Error while beginning batch transaction %v", err)
+	// }
+
+	// for _, payload := range payloads {
+	// 	args := append(fixedArgs, payload)
+
+	// 	ct, err := tx.Conn().PgConn().ExecBatch() // How to use this?
+
+	// 	// ExecBatch :
+	// 	// ExecBatch(ctx context.Context, batch *pgconn.Batch) *pgconn.MultiResultReader
+	// 	// ExecBatch executes all the queries in batch in a single round-trip.
+	// 	// Execution is implicitly transactional unless a transaction is already in progress or SQL contains transaction control statements.
+	// 	// This is a simpler way of executing multiple queries in a single round trip than using pipeline mode.
+
+	// 	if err != nil {
+	// 		return total, err
+	// 	}
+	// 	total += ct.RowsAffected()
+	// }
+	return total, nil
+}
+
 // Query will execute a query and return a list of maps where every list item is a row and every map item is a column
 func (c *Connection) Query(ctx context.Context, query string, args ...any) ([]map[string]any, error) {
 	rows, err := c.conn.Query(ctx, query, args...)

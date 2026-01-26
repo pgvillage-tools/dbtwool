@@ -36,12 +36,12 @@ func lobGenCommand() *cobra.Command {
 			for _, element := range genArgs.GetStringSlice("spread") {
 				fmt.Println("gen:" + element)
 			}
-			fmt.Println("gen:" + genArgs.GetString("bytesize"))
+			fmt.Println("gen:" + genArgs.GetString("byteSize"))
 
 		},
 	}
 
-	genArgs = allArgs.commandArgs(genCommand, append(globalArgs, "spread", "bytesize", "table"))
+	genArgs = allArgs.commandArgs(genCommand, append(globalArgs, "spread", "byteSize", "table"))
 	return genCommand
 }
 

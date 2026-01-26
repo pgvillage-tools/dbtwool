@@ -1,9 +1,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"strings"
 
 	"github.com/pgvillage-tools/dbtwool/internal/arguments"
+	"github.com/pgvillage-tools/dbtwool/pkg/dbclient"
+	"github.com/pgvillage-tools/dbtwool/pkg/lobperformance"
+	"github.com/pgvillage-tools/dbtwool/pkg/pg"
 	"github.com/spf13/cobra"
 )
 
@@ -26,24 +31,6 @@ func lobPerformanceCommand() *cobra.Command {
 	return lobPerformanceCommand
 }
 
-func lobGenCommand() *cobra.Command {
-	var genArgs arguments.Args
-	genCommand := &cobra.Command{
-		Use:   "gen",
-		Short: "generate all the things",
-		Long:  "Use this command to generate data to test with.",
-		Run: func(_ *cobra.Command, _ []string) {
-			for _, element := range genArgs.GetStringSlice("spread") {
-				fmt.Println("gen:" + element)
-			}
-			fmt.Println("gen:" + genArgs.GetString("bytesize"))
-		},
-	}
-
-	genArgs = arguments.AllArgs.CommandArgs(genCommand, append(globalArgs, "spread", "bytesize", "table"))
-	return genCommand
-}
-
 func lobStageCommand() *cobra.Command {
 	var stageArgs arguments.Args
 	stageCommand := &cobra.Command{
@@ -53,12 +40,60 @@ func lobStageCommand() *cobra.Command {
 		Run: func(_ *cobra.Command, _ []string) {
 			fmt.Println("stage:" + stageArgs.GetString("table"))
 			fmt.Println("stage:" + stageArgs.GetString("cfgFile"))
+
+			schema, table, err := parseSchemaTable(stageArgs.GetString("table"))
+
+			if err == nil {
+				params := pg.ConnParamsFromEnv()
+
+				postgresClient := pg.NewClient(params)
+
+				lobperformance.LobPerformanceStage(dbclient.RdbmsPostgres, context.Background(), &postgresClient, schema, table)
+			} else {
+				fmt.Printf("An error occurred while parsing the schema + table: %e", err)
+			}
 		},
 	}
 
 	stageArgs = arguments.AllArgs.CommandArgs(stageCommand, append(globalArgs, "table"))
 
 	return stageCommand
+}
+
+func lobGenCommand() *cobra.Command {
+	var genArgs arguments.Args
+	genCommand := &cobra.Command{
+		Use:   "gen",
+		Short: "generate all the things",
+		Long:  "Use this command to generate data to test with.",
+		Run: func(_ *cobra.Command, _ []string) {
+			schema, table, err := parseSchemaTable(genArgs.GetString("table"))
+
+			//func LobPerformanceGenerate(dbType dbclient.Rdbms, ctx context.Context, client dbinterface.Client, schemaName string, tableName string, spread []string, emptyLobs int64, byteSize string, lobType string) {
+
+			if err == nil {
+				params := pg.ConnParamsFromEnv()
+				postgresClient := pg.NewClient(params)
+
+				lobperformance.LobPerformanceGenerate(
+					dbclient.RdbmsPostgres,
+					context.Background(),
+					&postgresClient,
+					schema,
+					table,
+					genArgs.GetStringSlice("spread"),
+					int64(genArgs.GetUint("emptyLobs")),
+					genArgs.GetString("byteSize"),
+					genArgs.GetString("lobType"))
+			} else {
+				fmt.Printf("An error occurred while parsing the schema + table: %e", err)
+			}
+
+		},
+	}
+
+	genArgs = arguments.AllArgs.CommandArgs(genCommand, append(globalArgs, "spread", "byteSize", "table", "emptyLobs", "lobType"))
+	return genCommand
 }
 
 func lobTestCommand() *cobra.Command {
@@ -81,4 +116,24 @@ func lobTestCommand() *cobra.Command {
 		append(globalArgs, "parallel", "table", "spread"))
 
 	return testExecutionCommand
+}
+
+func parseSchemaTable(fullName string) (schema string, table string, err error) {
+	if fullName == "" {
+		return "", "", fmt.Errorf("table name cannot be empty")
+	}
+
+	if strings.Contains(fullName, ".") {
+		parts := strings.SplitN(fullName, ".", 2)
+		schema = parts[0]
+		table = parts[1]
+
+		if schema == "" || table == "" {
+			return "", "", fmt.Errorf("invalid table name %q, expected schema.table", fullName)
+		}
+
+		return schema, table, nil
+	} else {
+		return "dbtwooltests", fullName, nil
+	}
 }

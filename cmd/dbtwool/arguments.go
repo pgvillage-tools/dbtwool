@@ -84,7 +84,7 @@ var (
 		"isolationLevel": {short: "i", defValue: "1", argType: typeString, desc: `Transaction isolation level`},
 		"datasource":     {short: "d", defValue: "pg", argType: typeString, desc: `Datasource`},
 		"spread":         {short: "s", argType: typeStringArray, desc: `spread`},
-		"bytesize": {short: "b", argType: typeString,
+		"byteSize": {short: "b", argType: typeString,
 			desc: `What the size of the datasource should be in b, kb, gb, etc.`},
 		"table": {short: "t", defValue: "dbtwooltests.lobtable", argType: typeString,
 			desc: `What the schema + table name should be`},
