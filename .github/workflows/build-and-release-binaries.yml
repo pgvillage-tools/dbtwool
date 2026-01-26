@@ -23,6 +23,22 @@ jobs:
         with:
           version: v1
 
+      - name: Install IBM DB2 Driver
+        run: |
+          mkdir $HOME/goapp
+          cd $HOME/goapp
+          git clone https://github.com/ibmdb/go_ibm_db/
+          go env GOPATH
+          cd go_ibm_db/installer
+          go run ./setup.go
+          source ./setenv.sh
+          find $IBM_DB_HOME
+
+          echo "IBM_DB_HOME=$IBM_DB_HOME" >> $GITHUB_ENV
+          echo "CGO_CFLAGS=-I$IBM_DB_HOME/include" >> $GITHUB_ENV
+          echo "CGO_LDFLAGS=-L$IBM_DB_HOME/lib" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=$IBM_DB_HOME/lib" >> $GITHUB_ENV
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
