@@ -3,6 +3,7 @@ package db2client
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/pgvillage-tools/dbtwool/pkg/dbinterface"
 )
@@ -19,4 +20,21 @@ func (p Pool) Connect(ctx context.Context) (dbinterface.Connection, error) {
 		return nil, err
 	}
 	return &Connection{conn: conn}, nil
+}
+
+func (c *Connection) ExecuteWithPayload(ctx context.Context, sql string, payload any, args ...any) (int64, error) {
+	if c.tx == nil {
+		return 0, fmt.Errorf("ExecuteWithPayload requires an active transaction; call Begin() first")
+	}
+
+	allArgs := make([]any, 0, len(args)+1)
+	allArgs = append(allArgs, args...)
+	allArgs = append(allArgs, payload)
+
+	ct, err := c.conn.ExecContext(ctx, sql, allArgs...)
+	if err != nil {
+		return 0, err
+	}
+
+	return ct.RowsAffected()
 }

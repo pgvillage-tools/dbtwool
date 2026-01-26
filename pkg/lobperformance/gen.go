@@ -11,10 +11,10 @@ import (
 )
 
 type LobRowPlan struct {
-	RowIndex int64  // 0..N-1
+	RowIndex int64 // 0..N-1
+	TenantID int
 	LobType  string // "clob", "blob", ...
 	LobBytes int64  // exact size to generate for this row
-	TenantID int
 	DocType  string
 }
 
@@ -112,38 +112,52 @@ func processLobBatch(
 		}
 	}
 
-	insertSQL, err := dbHelper.InsertOneRowSql(lobType)
+	insertSQL, err := dbHelper.CreateInsertLobRowBaseSql(lobType)
 	if err != nil {
 		return err
 	}
 
-	const tenantID = 1
-	const docType = "lob-performance"
+	// Begin one transaction for the entire batch
+	if err := conn.Begin(ctx); err != nil {
+		return fmt.Errorf("begin batch tx failed: %w", err)
+	}
 
-	fixedArgs := []any{tenantID, docType}
-	payloads := make([]any, 0, len(batch))
+	// Ensure rollback on any failure
+	committed := false
+	defer func() {
+		if !committed {
+			_ = conn.Rollback(ctx) // if you have Rollback on interface; if not, add it.
+		}
+	}()
 
+	var rowsAltered int64
 	var totalBytes int64
+
 	for _, row := range batch {
-		payload, err := createLobPayload(lobType, row.LobBytes)
+		payload, err := createLobPayload(row.LobType, row.LobBytes)
 		if err != nil {
 			return fmt.Errorf("create payload failed for row_index=%d: %w", row.RowIndex, err)
 		}
 
-		payloads = append(payloads, payload)
+		ra, err := conn.ExecuteWithPayload(ctx, insertSQL, payload, row.TenantID, row.DocType)
+		if err != nil {
+			return fmt.Errorf("insert failed for row_index=%d: %w", row.RowIndex, err)
+		}
+
+		rowsAltered += ra
 		totalBytes += row.LobBytes
 	}
 
-	rowsAltered, err := conn.ExecuteBatchWithPayloads(ctx, insertSQL, fixedArgs, payloads)
-	if err != nil {
-		return fmt.Errorf("batch insert failed: %w", err)
+	if err := conn.Commit(ctx); err != nil {
+		return fmt.Errorf("commit batch tx failed: %w", err)
 	}
+	committed = true
 
 	logger.Debug().
 		Int("batch_index", batchIndex).
 		Int("rows", len(batch)).
-		Int64("lob_bytes", totalBytes).
 		Int64("rows_altered", rowsAltered).
+		Int64("lob_bytes", totalBytes).
 		Str("lob_type", lobType).
 		Msg("Inserted LOB batch")
 

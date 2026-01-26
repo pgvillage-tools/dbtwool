@@ -35,13 +35,11 @@ CREATE TABLE IF NOT EXISTS %v.%v (
 	return sql
 }
 
-func (helper PgHelper) InsertOneRowSql(lobType string) (string, error) {
+func (helper PgHelper) CreateInsertLobRowBaseSql(lobType string) (string, error) {
 	col := payloadColumnForLobType(lobType)
 	if col == "" {
 		return "", fmt.Errorf("unsupported lobType %q", lobType)
 	}
-
-	// payload is parameter $3
 	sql := fmt.Sprintf(`
 INSERT INTO %v.%v (tenant_id, doc_type, %v)
 VALUES ($1, $2, $3);`, helper.schemaName, helper.tableName, col)

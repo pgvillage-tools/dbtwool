@@ -3,6 +3,7 @@ package pg
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pgvillage-tools/dbtwool/pkg/dbinterface"
@@ -23,6 +24,22 @@ func NewClient(connectionParams ConnParams) Client {
 	return Client{
 		ConnectParams: connectionParams,
 	}
+}
+
+func (c *Connection) ExecuteWithPayload(ctx context.Context, sql string, payload any, args ...any) (int64, error) {
+	if c.tx == nil {
+		return 0, fmt.Errorf("ExecuteWithPayload requires an active transaction; call Begin() first")
+	}
+
+	allArgs := make([]any, 0, len(args)+1)
+	allArgs = append(allArgs, args...)
+	allArgs = append(allArgs, payload)
+
+	ct, err := c.conn.Exec(ctx, sql, allArgs...)
+	if err != nil {
+		return 0, err
+	}
+	return ct.RowsAffected(), nil
 }
 
 // Pool will connect to DB2 and return a new PostgreSQL pool

@@ -35,6 +35,6 @@ CREATE TABLE %v.%v (
 	return sql
 }
 
-func (helper Db2Helper) InsertOneRowSql(lobType string) (string, error) {
+func (helper Db2Helper) CreateInsertLobRowBaseSql(lobType string) (string, error) {
 	return "", nil
 }
