@@ -23,8 +23,6 @@ COPY cmd /usr/src/app/cmd/
 COPY internal /usr/src/app/internal/
 COPY pkg /usr/src/app/pkg/
 
-RUN find $PWD
-RUN find $IBM_HOME
 RUN go mod tidy
 RUN go build -v -a -ldflags="-X 'github.com/pgvillage-tools/dbtwool/internal/version/main.appVersion=${VERSION}'" -o ./dbtwool ./cmd/dbtwool
 

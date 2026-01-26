@@ -1,5 +1,5 @@
-// Package db2e2e_test runs end-to-end tests for dbtwool
-package db2e2e_test
+// Package pge2e_test runs end-to-end tests for dbtwool
+package pge2e_test
 
 import (
 	"context"
@@ -7,9 +7,8 @@ import (
 	"io"
 	"os"
 	"strings"
-	"time"
 
-	"github.com/docker/docker/api/types/container"
+	. "github.com/onsi/ginkgo/v2"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
@@ -20,10 +19,20 @@ func containerLogs(ctx context.Context, cnt testcontainers.Container) (string, e
 		return "", err
 	}
 
-	// Lees alles uit naar een string of print het
 	buf := new(strings.Builder)
 	_, _ = io.Copy(buf, reader)
 	return buf.String(), nil
+}
+
+func debugContainerLogs(ctx context.Context, cnt testcontainers.Container) error {
+	logs, err := containerLogs(ctx, cnt)
+	if err != nil {
+		return err
+	}
+	for _, line := range strings.Split(logs, "\n") {
+		fmt.Fprintf(GinkgoWriter, "DEBUG - Containerlogs: %s", line)
+	}
+	return nil
 }
 
 func runDbwTool(
@@ -41,7 +50,7 @@ func runDbwTool(
 				Networks: []string{nw.Name},
 				FromDockerfile: testcontainers.FromDockerfile{
 					Context:        "../../",
-					Dockerfile:     "Dockerfile",
+					Dockerfile:     "Dockerfile.pg",
 					BuildLogWriter: os.Stdout,
 				},
 			},
@@ -49,31 +58,27 @@ func runDbwTool(
 		})
 }
 
-func runDB2(
+func runPostgres(
 	ctx context.Context,
 	nw *testcontainers.DockerNetwork,
 	aliasses map[string][]string,
-	env map[string]string,
+	settings map[string]string,
 ) (testcontainers.Container, error) {
-	/*
-	   environment:
-	*/
-	env["LICENSE"] = "accept"
-
-	const image = "icr.io/db2_community/db2"
+	pgVersion := os.Getenv("PGVERSION")
+	if pgVersion == "" {
+		pgVersion = "18"
+	}
+	image := fmt.Sprintf("docker.io/postgres:%s", pgVersion)
 	fmt.Printf("starting %s\n", image)
 	return testcontainers.GenericContainer(
 		ctx, testcontainers.GenericContainerRequest{
 			ContainerRequest: testcontainers.ContainerRequest{
-				ImagePlatform:      "linux/amd64",
-				Image:              image,
-				HostConfigModifier: func(hc *container.HostConfig) { hc.Privileged = true },
-				Env:                env,
-				Networks:           []string{nw.Name},
-				NetworkAliases:     aliasses,
-				WaitingFor: wait.ForLog(".*Setup has completed.*").
-					AsRegexp().
-					WithStartupTimeout(10 * time.Minute),
+				Image:          image,
+				Env:            settings,
+				Networks:       []string{nw.Name},
+				NetworkAliases: aliasses,
+				WaitingFor: wait.ForLog(
+					"database system is ready to accept connections"),
 			},
 			Started: true,
 		})
