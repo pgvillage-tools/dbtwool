@@ -1,26 +1,35 @@
-package dbclient
+package db2client
 
 import (
 	"context"
 	"database/sql"
 	"fmt"
+
+	"github.com/pgvillage-tools/dbtwool/pkg/dbinterface"
 )
 
 // Connection is a wrapper over sql.Conn, so that we can add methods
 type Connection struct {
-	ctx  context.Context
 	conn *sql.Conn
 	tx   *sql.Tx
 }
 
 // Close closes the connection
-func (c *Connection) Close() error {
+func (c *Connection) Close(_ context.Context) error {
 	return c.conn.Close()
 }
 
+// SetIsolationLevel can be used to change the isolation level on a connection
+func (c *Connection) SetIsolationLevel(ctx context.Context, isoLevel dbinterface.IsolationLevel) error {
+	qryIsoLevel := isoLevel.AsQuery()
+	logger.Info().Msgf("CONN2: %s", qryIsoLevel)
+	_, err := c.Execute(ctx, qryIsoLevel)
+	return err
+}
+
 // Execute will execute a query and return number of affected rows
-func (c *Connection) Execute(query string) (int64, error) {
-	r, err := c.conn.ExecContext(c.ctx, query)
+func (c *Connection) Execute(ctx context.Context, query string) (int64, error) {
+	r, err := c.conn.ExecContext(ctx, query)
 	if err != nil {
 		return 0, err
 	}
@@ -28,8 +37,8 @@ func (c *Connection) Execute(query string) (int64, error) {
 }
 
 // Query will execute a query and return a list of maps where every list item is a row and every map item is a column
-func (c *Connection) Query(query string, args ...any) ([]map[string]any, error) {
-	rows, err := c.conn.QueryContext(c.ctx, query, args...)
+func (c *Connection) Query(ctx context.Context, query string, args ...any) ([]map[string]any, error) {
+	rows, err := c.conn.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -37,8 +46,8 @@ func (c *Connection) Query(query string, args ...any) ([]map[string]any, error) 
 }
 
 // QueryOneRow executes a query and expects one row, or fails. On success it returns the row.
-func (c *Connection) QueryOneRow(query string, args ...any) (map[string]any, error) {
-	rows, queryErr := c.Query(query, args...)
+func (c *Connection) QueryOneRow(ctx context.Context, query string, args ...any) (map[string]any, error) {
+	rows, queryErr := c.Query(ctx, query, args...)
 	if queryErr != nil {
 		logger.Fatal().Msgf("error while executing olap query %v", queryErr)
 	}
@@ -49,8 +58,8 @@ func (c *Connection) QueryOneRow(query string, args ...any) (map[string]any, err
 }
 
 // Begin starts a transaction. In this case there is a one-on-one relation between the transaction and the connection
-func (c *Connection) Begin() error {
-	tx, err := c.conn.BeginTx(c.ctx, nil)
+func (c *Connection) Begin(ctx context.Context) error {
+	tx, err := c.conn.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -59,7 +68,7 @@ func (c *Connection) Begin() error {
 }
 
 // Commit will commit the connection
-func (c *Connection) Commit() error {
+func (c *Connection) Commit(_ context.Context) error {
 	if c.tx != nil {
 		if err := c.tx.Commit(); err != nil {
 			return err
@@ -70,7 +79,7 @@ func (c *Connection) Commit() error {
 }
 
 // Rollback will rollback the transaction
-func (c *Connection) Rollback() error {
+func (c *Connection) Rollback(_ context.Context) error {
 	if c.tx != nil {
 		if err := c.tx.Rollback(); err != nil {
 			return err
