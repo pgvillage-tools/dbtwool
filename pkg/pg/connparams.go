@@ -1,4 +1,4 @@
-package dbclient
+package pg
 
 import (
 	"fmt"
@@ -6,8 +6,8 @@ import (
 	"github.com/pgvillage-tools/dbtwool/pkg/utils"
 )
 
-// PgConnParams objects define connection parameters for a DB2 connection
-type PgConnParams struct {
+// ConnParams objects define connection parameters for a DB2 connection
+type ConnParams struct {
 	Host     string
 	Port     string
 	Database string
@@ -17,7 +17,7 @@ type PgConnParams struct {
 }
 
 // GetConnString builds and returns a string that can be used to connect to PostgreSQL
-func (cp PgConnParams) GetConnString() string {
+func (cp ConnParams) GetConnString() string {
 	return fmt.Sprintf(
 		"host=%s port=%s dbname=%s user=%s password=%s sslmode=%s",
 		cp.Host,
@@ -29,9 +29,9 @@ func (cp PgConnParams) GetConnString() string {
 	)
 }
 
-// NewPgConnParamsFromEnv generates a new default ConnParams from env variables with defaults
-func NewPgConnParamsFromEnv() ConnParams {
-	return PgConnParams{
+// ConnParamsFromEnv generates a new default ConnParams from env variables with defaults
+func ConnParamsFromEnv() ConnParams {
+	return ConnParams{
 		Host:     utils.GetEnv("PGHOST", "localhost"),
 		Port:     utils.GetEnv("PGPORT", "5432"),
 		Database: utils.GetEnv("PGDATABASE", "postgres"),

@@ -1,4 +1,4 @@
-package dbclient
+package db2client
 
 import (
 	"fmt"
