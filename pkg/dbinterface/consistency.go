@@ -19,18 +19,18 @@ func ConsistencyTest(
 	var logger = log.With().Logger()
 	pool, poolErr := cl.Pool(ctx)
 	if poolErr != nil {
-		logger.Fatal().Msgf("Failed to connect: %e", poolErr)
+		logger.Fatal().Msgf("Failed to connect: %v", poolErr)
 	}
 
 	conn1, connectErr1 := pool.Connect(ctx) //
 	if connectErr1 != nil {
-		logger.Fatal().Msgf("connect error for connection 1: %e", connectErr1)
+		logger.Fatal().Msgf("connect error for connection 1: %v", connectErr1)
 	}
 	defer conn1.Close(ctx)
 
 	conn2, connectErr2 := pool.Connect(ctx)
 	if connectErr2 != nil {
-		logger.Fatal().Msgf("connect error for connection 1: %e", connectErr2)
+		logger.Fatal().Msgf("connect error for connection 1: %v", connectErr2)
 	}
 	defer conn2.Close(ctx)
 

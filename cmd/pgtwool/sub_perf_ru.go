@@ -38,11 +38,11 @@ func ruGenCommand() *cobra.Command {
 			for _, element := range genCmdArgs.GetStringSlice("spread") {
 				fmt.Println("gen:" + element)
 			}
-			fmt.Println("gen:" + genCmdArgs.GetString("bytesize"))
+			fmt.Println("gen:" + genCmdArgs.GetString("byteSize"))
 		},
 	}
 
-	genCmdArgs = arguments.AllArgs.CommandArgs(genCommand, append(globalArgs, "spread", "bytesize", "table"))
+	genCmdArgs = arguments.AllArgs.CommandArgs(genCommand, append(globalArgs, "spread", "byteSize", "table"))
 	return genCommand
 }
 

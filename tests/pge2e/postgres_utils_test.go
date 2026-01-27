@@ -31,7 +31,7 @@ func (cp pgConnParams) setParam(key, value string) pgConnParams {
 func pgPing(ctx context.Context, connParams pgConnParams) error {
 	conn, err := pgx.Connect(ctx, connParams.connString())
 	if err != nil {
-		fmt.Printf("Connect Error (%s): %e\n", connParams.connString(), err)
+		fmt.Printf("Connect Error (%s): %v\n", connParams.connString(), err)
 		return err
 	}
 	defer conn.Close(ctx)
@@ -39,7 +39,7 @@ func pgPing(ctx context.Context, connParams pgConnParams) error {
 	var name string
 	err = conn.QueryRow(ctx, "select datname from pg_database;").Scan(&name)
 	if err != nil {
-		fmt.Printf("Query Error (%s): %e\n", connParams.connString(), err)
+		fmt.Printf("Query Error (%s): %v\n", connParams.connString(), err)
 		return err
 	}
 	fmt.Printf("Ping successful (%s)\n", connParams.connString())

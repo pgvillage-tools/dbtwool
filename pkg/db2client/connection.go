@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"github.com/pgvillage-tools/dbtwool/pkg/dbinterface"
 )
@@ -113,11 +114,13 @@ func rowsToMaps(rows *sql.Rows) ([]map[string]any, error) {
 
 		rowMap := make(map[string]any, len(cols))
 		for i, colName := range cols {
+			key := strings.ToLower(colName) // Makes uppercase column names not break everything
 			val := values[i]
+
 			if b, ok := val.([]byte); ok {
-				rowMap[colName] = string(b)
+				rowMap[key] = string(b)
 			} else {
-				rowMap[colName] = val
+				rowMap[key] = val
 			}
 		}
 		results = append(results, rowMap)
