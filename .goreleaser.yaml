@@ -17,37 +17,33 @@ before:
 
 builds:
   - id: pgtwool
-    env:
-      - CGO_ENABLED=0
     goos:
       - linux
-      - windows
-      - darwin
+      #- windows
+      #- darwin
     goarch:
       - amd64
-      - arm64
-    ignore:
-      - goos: windows
-        goarch: arm64
+      #- arm64
+    #ignore:
+    #  - goos: windows
+    #    goarch: arm64
     main: ./cmd/pgtwool
     binary: pgtwool
     ldflags:
       - -s -w -X "github.com/pgvillage-tools/dbtwool/internal/version.appVersion={{.Version}}"
   - id: dbtwool
-    env:
-      - CGO_ENABLED=0
     goos:
       - linux
-      - windows
-      - darwin
+      #- windows
+      #- darwin
     goarch:
       - amd64
-      - arm64
-    ignore:
-      - goos: windows
-        goarch: arm64
-      - goos: linux
-        goarch: arm64
+      #- arm64
+    #ignore:
+    #  - goos: windows
+    #    goarch: arm64
+    #  - goos: linux
+    #    goarch: arm64
     main: ./cmd/dbtwool
     binary: dbtwool
     ldflags:
