@@ -1,4 +1,4 @@
-// Package pg holds all code to connect to db2
+// Package pg holds all code to connect to PostgreSQL
 package pg
 
 import (
@@ -13,7 +13,7 @@ const (
 	pgTestQuery = "SELECT 1;"
 )
 
-// Client is the main object to connect to DB2
+// Client is the main object to connect to PostgreSQL
 type Client struct {
 	ConnectParams ConnParams
 	pool          *Pool
@@ -43,7 +43,7 @@ func (c *Connection) ExecuteWithPayload(ctx context.Context, sql string, payload
 	return ct.RowsAffected(), nil
 }
 
-// Pool will connect to DB2 and return a new PostgreSQL pool
+// Pool will connect to PostgreSQL and return a new PostgreSQL pool
 func (cl *Client) Pool(ctx context.Context) (dbinterface.Pool, error) {
 	if cl.pool != nil {
 		return *cl.pool, nil
