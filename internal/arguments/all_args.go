@@ -6,7 +6,7 @@ var (
 		"cfgFile":        {short: "c", defValue: "config.yaml", argType: typePath, desc: `config file`},
 		"isolationLevel": {short: "i", defValue: "1", argType: typeString, desc: `Transaction isolation level`},
 		"spread":         {short: "s", argType: typeStringArray, desc: `spread`},
-		"byteSize": {short: "b", argType: typeString,
+		"byteSize": {short: "b", defValue: "1kb", argType: typeString,
 			desc: `What the size of the datasource should be in b, kb, gb, etc.`},
 		"lobType": {short: "l", defValue: "LOB", argType: typeString,
 			desc: `What type of large object. (LOB, CLOB, JSONB, etc.)`},
@@ -19,6 +19,7 @@ var (
 		"parallel":      {short: "p", defValue: uint(1), argType: typeUInt, desc: `The degree of parallel execution`},
 		"warmupTime":    {short: "w", defValue: uint(1), argType: typeUInt, desc: `The test warmup time in seconds`},
 		"executionTime": {short: "x", defValue: uint(1), argType: typeUInt, desc: `The test execution time in seconds`},
-		"readMode":      {short: "m", defValue: "scattered", argType: typeString, desc: `How the reading of LOBs is distributed. 'scattered' or 'sequential'. leave empty for scattered.`},
+		"readMode": {short: "m", defValue: "scattered", argType: typeString,
+			desc: `How the reading of LOBs is distributed. 'scattered' or 'sequential'. leave empty for scattered.`},
 	}
 )
