@@ -27,12 +27,18 @@ RUN go mod tidy
 RUN go build -v -a -ldflags="-X 'github.com/pgvillage-tools/dbtwool/internal/version/main.appVersion=${VERSION}'" -o ./dbtwool ./cmd/dbtwool
 
 FROM --platform=amd64 debian:bookworm
+ARG IBM_HOME=/opt/ibm/db2
+ARG IBM_DB_HOME=$IBM_HOME/clidriver
 
-ENV CGO_CFLAGS=-I$IBM_DB_HOME/include \
+ENV IBM_DB_HOME=$IBM_DB_HOME \
+    CGO_CFLAGS=-I$IBM_DB_HOME/include \
     CGO_LDFLAGS=-L$IBM_DB_HOME/lib \
     LD_LIBRARY_PATH=$IBM_DB_HOME/lib
 
 COPY --from=buildstage "$IBM_DB_HOME" "$IBM_DB_HOME"
 COPY --from=buildstage /usr/src/app/dbtwool /dbtwool
+RUN apt update -y && \
+    apt install -y libxml2 && \
+    rm -rf /var/cache/apt/archives /var/lib/apt/lists
 
 ENTRYPOINT ["/dbtwool"]
