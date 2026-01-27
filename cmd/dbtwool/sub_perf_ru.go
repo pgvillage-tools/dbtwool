@@ -53,11 +53,10 @@ func ruStageCommand() *cobra.Command {
 		Long:  "Create the necessary schema and table(s)",
 		Run: func(_ *cobra.Command, _ []string) {
 			fmt.Println("stage:" + stageCmdArgs.GetString("table"))
-			fmt.Println("stage:" + stageCmdArgs.GetString("datasource"))
 		},
 	}
 
-	stageCmdArgs = allArgs.commandArgs(stageCommand, append(globalArgs, "table", "datasource"))
+	stageCmdArgs = allArgs.commandArgs(stageCommand, append(globalArgs, "table"))
 
 	return stageCommand
 }

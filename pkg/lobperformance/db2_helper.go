@@ -2,6 +2,7 @@ package lobperformance
 
 import (
 	"fmt"
+	"strings"
 )
 
 type Db2Helper struct {
@@ -36,5 +37,25 @@ CREATE TABLE %v.%v (
 }
 
 func (helper Db2Helper) CreateInsertLobRowBaseSql(lobType string) (string, error) {
-	return "", nil
+	col := payloadColumnForLobTypeDb2(lobType)
+	if col == "" {
+		return "", fmt.Errorf("unsupported lobType %q", lobType)
+	}
+	sql := fmt.Sprintf(`
+INSERT INTO %v.%v (tenant_id, doc_type, %v)
+VALUES (?, ?, ?);`, helper.schemaName, helper.tableName, col)
+
+	logger.Debug().Msg(sql)
+	return sql, nil
+}
+
+func payloadColumnForLobTypeDb2(lobType string) string {
+	switch strings.ToLower(lobType) {
+	case "clob", "text":
+		return "payload_text"
+	case "blob", "bytea":
+		return "payload_bin"
+	default:
+		return ""
+	}
 }

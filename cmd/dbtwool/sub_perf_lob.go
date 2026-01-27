@@ -1,9 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
+	db2 "github.com/pgvillage-tools/dbtwool/pkg/db2client"
+	"github.com/pgvillage-tools/dbtwool/pkg/dbclient"
+	"github.com/pgvillage-tools/dbtwool/pkg/lobperformance"
 	"github.com/spf13/cobra"
 )
 
@@ -26,25 +30,6 @@ func lobPerformanceCommand() *cobra.Command {
 	return lobPerformanceCommand
 }
 
-func lobGenCommand() *cobra.Command {
-	var genArgs args
-	genCommand := &cobra.Command{
-		Use:   "gen",
-		Short: "generate all the things",
-		Long:  "Use this command to generate data to test with.",
-		Run: func(_ *cobra.Command, _ []string) {
-			for _, element := range genArgs.GetStringSlice("spread") {
-				fmt.Println("gen:" + element)
-			}
-			fmt.Println("gen:" + genArgs.GetString("byteSize"))
-
-		},
-	}
-
-	genArgs = allArgs.commandArgs(genCommand, append(globalArgs, "spread", "byteSize", "table"))
-	return genCommand
-}
-
 func lobStageCommand() *cobra.Command {
 	var stageArgs args
 	stageCommand := &cobra.Command{
@@ -52,15 +37,54 @@ func lobStageCommand() *cobra.Command {
 		Short: "create tables",
 		Long:  "Create the necessary schema and table(s)",
 		Run: func(_ *cobra.Command, _ []string) {
-			fmt.Println("stage:" + stageArgs.GetString("table"))
-			fmt.Println("stage:" + stageArgs.GetString("datasource"))
-			fmt.Println("stage:" + stageArgs.GetString("cfgFile"))
+			schema, table, err := parseSchemaTable(stageArgs.GetString("table"))
+
+			if err == nil {
+				params := db2.NewDB2ConnparamsFromEnv()
+				db2Client := db2.NewClient(params)
+				lobperformance.LobPerformanceStage(dbclient.RdbmsDB2, context.Background(), &db2Client, schema, table)
+			} else {
+				fmt.Printf("An error occurred while parsing the schema + table: %e", err)
+			}
 		},
 	}
 
-	stageArgs = allArgs.commandArgs(stageCommand, append(globalArgs, "table", "datasource"))
+	stageArgs = allArgs.commandArgs(stageCommand, append(globalArgs, "table"))
 
 	return stageCommand
+}
+
+func lobGenCommand() *cobra.Command {
+	var genArgs args
+	genCommand := &cobra.Command{
+		Use:   "gen",
+		Short: "generate all the things",
+		Long:  "Use this command to generate data to test with.",
+		Run: func(_ *cobra.Command, _ []string) {
+			schema, table, err := parseSchemaTable(genArgs.GetString("table"))
+
+			if err == nil {
+				params := db2.NewDB2ConnparamsFromEnv()
+				db2Client := db2.NewClient(params)
+
+				lobperformance.LobPerformanceGenerate(
+					dbclient.RdbmsDB2,
+					context.Background(),
+					&db2Client,
+					schema,
+					table,
+					genArgs.GetStringSlice("spread"),
+					int64(genArgs.GetUint("emptyLobs")),
+					genArgs.GetString("byteSize"),
+					genArgs.GetString("lobType"))
+			} else {
+				fmt.Printf("An error occurred while parsing the schema + table: %e", err)
+			}
+		},
+	}
+
+	genArgs = allArgs.commandArgs(genCommand, append(globalArgs, "spread", "byteSize", "table", "emptyLobs", "lobType"))
+	return genCommand
 }
 
 func lobTestCommand() *cobra.Command {

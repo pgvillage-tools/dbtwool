@@ -38,9 +38,6 @@ func lobStageCommand() *cobra.Command {
 		Short: "create tables",
 		Long:  "Create the necessary schema and table(s)",
 		Run: func(_ *cobra.Command, _ []string) {
-			fmt.Println("stage:" + stageArgs.GetString("table"))
-			fmt.Println("stage:" + stageArgs.GetString("cfgFile"))
-
 			schema, table, err := parseSchemaTable(stageArgs.GetString("table"))
 
 			if err == nil {
@@ -68,8 +65,6 @@ func lobGenCommand() *cobra.Command {
 		Long:  "Use this command to generate data to test with.",
 		Run: func(_ *cobra.Command, _ []string) {
 			schema, table, err := parseSchemaTable(genArgs.GetString("table"))
-
-			//func LobPerformanceGenerate(dbType dbclient.Rdbms, ctx context.Context, client dbinterface.Client, schemaName string, tableName string, spread []string, emptyLobs int64, byteSize string, lobType string) {
 
 			if err == nil {
 				params := pg.ConnParamsFromEnv()
