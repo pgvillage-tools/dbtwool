@@ -20,7 +20,7 @@ type SpreadBucket struct {
 }
 
 // BuildLOBPlan builds a LOB plan to be used for generating LOB data
-func BuildLOBPlan(totalBytes int64, lobType string, buckets []SpreadBucket,
+func verifyBuildLOBPlan(totalBytes int64, lobType string, buckets []SpreadBucket,
 	emptyLobs int64) ([]LOBRowPlan, error) {
 	if totalBytes < 0 {
 		return nil, errors.New("totalBytes must be >= 0")
@@ -51,6 +51,18 @@ func BuildLOBPlan(totalBytes int64, lobType string, buckets []SpreadBucket,
 	if math.Abs(sumPct-100.0) > superSmallFloat {
 		return nil, fmt.Errorf("spreads must sum to 100%%, got %.4f%%", sumPct)
 	}
+	return nil, nil
+}
+
+// BuildLOBPlan builds a LOB plan to be used for generating LOB data
+func BuildLOBPlan(totalBytes int64, lobType string, buckets []SpreadBucket,
+	emptyLobs int64) ([]LOBRowPlan, error) {
+	if plan, err := verifyBuildLOBPlan(totalBytes, lobType, buckets,
+		emptyLobs); err != nil {
+		return nil, err
+	} else if plan != nil {
+		return plan, nil
+	}
 
 	// Allocate bytes per bucket (rounding fixed on last bucket)
 	type alloc struct {
@@ -68,10 +80,8 @@ func BuildLOBPlan(totalBytes int64, lobType string, buckets []SpreadBucket,
 			target = totalBytes - assigned
 		}
 		assigned += target
-
 		rows := target / b.Size
 		used := rows * b.Size
-
 		allocs = append(allocs, alloc{size: b.Size, targetByte: target, rows: rows, usedByte: used})
 	}
 
@@ -115,7 +125,7 @@ func BuildLOBPlan(totalBytes int64, lobType string, buckets []SpreadBucket,
 	}
 
 	// Append empty LOB rows
-	for i := int64(0); i < emptyLobs; i++ {
+	for range emptyLobs {
 		plan = append(plan, LOBRowPlan{RowIndex: idx, LobType: lobType, LobBytes: 0})
 		idx++
 	}

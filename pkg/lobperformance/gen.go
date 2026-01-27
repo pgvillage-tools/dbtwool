@@ -25,7 +25,6 @@ func Generate(ctx context.Context, dbType dbclient.RDBMS, client dbinterface.Cli
 	schemaName string, tableName string, spread []string, emptyLobs int64, byteSize string,
 	lobType string) {
 	var logger = log.With().Logger()
-
 	logger.Info().Msg("Initiating connection pool.")
 	pool, poolErr := client.Pool(ctx)
 	if poolErr != nil {
@@ -40,7 +39,6 @@ func Generate(ctx context.Context, dbType dbclient.RDBMS, client dbinterface.Cli
 	defer conn.Close(ctx)
 
 	var dbHelper DBHelper
-
 	if dbType == dbclient.DB2 {
 		dbHelper = DB2Helper{schemaName: schemaName, tableName: tableName}
 	} else {
@@ -56,7 +54,6 @@ func Generate(ctx context.Context, dbType dbclient.RDBMS, client dbinterface.Cli
 	logger.Info().Msgf("Totalbytes set to %v", totalBytes)
 
 	var buckets []SpreadBucket
-
 	for _, s := range spread {
 		b, err := ParseSpread(s)
 		if err != nil {
@@ -66,14 +63,12 @@ func Generate(ctx context.Context, dbType dbclient.RDBMS, client dbinterface.Cli
 	}
 
 	logger.Info().Msg("Building LOB generation plan")
-
 	plan, err := BuildLOBPlan(totalBytes, lobType, buckets, int64(emptyLobs))
 	if err != nil {
 		logger.Fatal().Msgf("Something went wrong building the LOB generation plan: %e", err)
 	}
 
 	logger.Info().Msgf("Building LOB generation plan finished. %v rows will be inserted.", len(plan))
-
 	const batchSize = 100
 	logger.Info().Msgf("Batch size set to %v", batchSize)
 
