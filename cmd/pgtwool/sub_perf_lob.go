@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -45,7 +46,7 @@ func lobStageCommand() *cobra.Command {
 
 				postgresClient := pg.NewClient(params)
 
-				lobperformance.LobPerformanceStage(dbclient.RdbmsPostgres, context.Background(), &postgresClient, schema, table)
+				lobperformance.Stage(context.Background(), dbclient.Postgres, &postgresClient, schema, table)
 			} else {
 				fmt.Printf("An error occurred while parsing the schema + table: %e", err)
 			}
@@ -66,16 +67,16 @@ func lobGenCommand() *cobra.Command {
 		Run: func(_ *cobra.Command, _ []string) {
 			fmt.Printf("lob-performance test: %s\n", genArgs.GetString("randomizerSeed"))
 
-			//not used yet
+			// not used yet
 			schema, table, err := parseSchemaTable(genArgs.GetString("table"))
 
 			if err == nil {
 				params := pg.ConnParamsFromEnv()
 				postgresClient := pg.NewClient(params)
 
-				lobperformance.LobPerformanceGenerate(
-					dbclient.RdbmsPostgres,
+				lobperformance.Generate(
 					context.Background(),
+					dbclient.Postgres,
 					&postgresClient,
 					schema,
 					table,
@@ -89,7 +90,9 @@ func lobGenCommand() *cobra.Command {
 		},
 	}
 
-	genArgs = arguments.AllArgs.CommandArgs(genCommand, append(globalArgs, "spread", "byteSize", "table", "emptyLobs", "lobType", "randomizerSeed"))
+	genArgs = arguments.AllArgs.CommandArgs(genCommand,
+		// revive:disable-next-line
+		append(globalArgs, "spread", "byteSize", "table", "emptyLobs", "lobType", "randomizerSeed"))
 	return genCommand
 }
 
@@ -100,16 +103,15 @@ func lobTestCommand() *cobra.Command {
 		Short: "run the test",
 		Long:  "Use this command to run the test on the earlier created data.",
 		Run: func(_ *cobra.Command, _ []string) {
-
 			schema, table, err := parseSchemaTable(testExecutionArgs.GetString("table"))
 
 			if err == nil {
 				params := pg.ConnParamsFromEnv()
 				postgresClient := pg.NewClient(params)
 
-				err := lobperformance.LobPerformanceExecuteTest(
-					dbclient.RdbmsPostgres,
+				err := lobperformance.ExecuteTest(
 					context.Background(),
+					dbclient.Postgres,
 					&postgresClient,
 					schema,
 					table,
@@ -130,6 +132,7 @@ func lobTestCommand() *cobra.Command {
 	}
 
 	testExecutionArgs = arguments.AllArgs.CommandArgs(testExecutionCommand,
+		// revive:disable-next-line
 		append(globalArgs, "table", "randomizerSeed", "parallel", "warmupTime", "executionTime", "readMode", "lobType"))
 
 	return testExecutionCommand
@@ -137,7 +140,7 @@ func lobTestCommand() *cobra.Command {
 
 func parseSchemaTable(fullName string) (schema string, table string, err error) {
 	if fullName == "" {
-		return "", "", fmt.Errorf("table name cannot be empty")
+		return "", "", errors.New("table name cannot be empty")
 	}
 
 	if strings.Contains(fullName, ".") {
@@ -150,7 +153,6 @@ func parseSchemaTable(fullName string) (schema string, table string, err error) 
 		}
 
 		return schema, table, nil
-	} else {
-		return "dbtwooltests", fullName, nil
 	}
+	return "dbtwooltests", fullName, nil
 }

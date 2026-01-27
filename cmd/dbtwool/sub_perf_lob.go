@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -42,7 +43,7 @@ func lobStageCommand() *cobra.Command {
 			if err == nil {
 				params := db2.NewDB2ConnparamsFromEnv()
 				db2Client := db2.NewClient(params)
-				lobperformance.LobPerformanceStage(dbclient.RdbmsDB2, context.Background(), &db2Client, schema, table)
+				lobperformance.Stage(context.Background(), dbclient.DB2, &db2Client, schema, table)
 			} else {
 				fmt.Printf("An error occurred while parsing the schema + table: %e", err)
 			}
@@ -67,9 +68,9 @@ func lobGenCommand() *cobra.Command {
 				params := db2.NewDB2ConnparamsFromEnv()
 				db2Client := db2.NewClient(params)
 
-				lobperformance.LobPerformanceGenerate(
-					dbclient.RdbmsDB2,
+				lobperformance.Generate(
 					context.Background(),
+					dbclient.DB2,
 					&db2Client,
 					schema,
 					table,
@@ -94,16 +95,15 @@ func lobTestCommand() *cobra.Command {
 		Short: "run the test",
 		Long:  "Use this command to run the test on the earlier created data.",
 		Run: func(_ *cobra.Command, _ []string) {
-
 			schema, table, err := parseSchemaTable(testExecutionArgs.GetString("table"))
 
 			if err == nil {
 				params := db2.NewDB2ConnparamsFromEnv()
 				db2Client := db2.NewClient(params)
 
-				err := lobperformance.LobPerformanceExecuteTest(
-					dbclient.RdbmsDB2,
+				err := lobperformance.ExecuteTest(
 					context.Background(),
+					dbclient.DB2,
 					&db2Client,
 					schema,
 					table,
@@ -120,18 +120,21 @@ func lobTestCommand() *cobra.Command {
 			} else {
 				fmt.Printf("An error occurred while parsing the schema + table: %e", err)
 			}
-
 		},
 	}
 
-	testExecutionArgs = allArgs.commandArgs(testExecutionCommand, append(globalArgs, "table", "randomizerSeed", "parallel", "warmupTime", "executionTime", "readMode", "lobType"))
+	testExecutionArgs = allArgs.commandArgs(
+		testExecutionCommand,
+		// revive:disable-next-line
+		append(globalArgs, "table", "randomizerSeed", "parallel", "warmupTime", "executionTime", "readMode", "lobType"),
+	)
 
 	return testExecutionCommand
 }
 
 func parseSchemaTable(fullName string) (schema string, table string, err error) {
 	if fullName == "" {
-		return "", "", fmt.Errorf("table name cannot be empty")
+		return "", "", errors.New("table name cannot be empty")
 	}
 
 	if strings.Contains(fullName, ".") {
@@ -144,7 +147,6 @@ func parseSchemaTable(fullName string) (schema string, table string, err error) 
 		}
 
 		return schema, table, nil
-	} else {
-		return "dbtwooltests", fullName, nil
 	}
+	return "dbtwooltests", fullName, nil
 }

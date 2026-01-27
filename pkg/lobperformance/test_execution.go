@@ -2,6 +2,7 @@ package lobperformance
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"sync"
@@ -14,9 +15,10 @@ import (
 	"github.com/pgvillage-tools/dbtwool/pkg/dbinterface"
 )
 
-func LobPerformanceExecuteTest(
-	dbType dbclient.Rdbms,
+// ExecuteTest executes the performance test
+func ExecuteTest(
 	ctx context.Context,
+	dbType dbclient.RDBMS,
 	client dbinterface.Client,
 	schemaName string,
 	tableName string,
@@ -27,13 +29,14 @@ func LobPerformanceExecuteTest(
 	readMode string,
 	lobType string,
 ) error {
-	//This dbhelper logic should be moved to things outside this package. Where client specific logic lives
-	var dbHelper DbHelper = nil
+	// This dbhelper logic should be moved to things outside this package.
+	// Where client specific logic lives
+	var dbHelper DBHelper
 
-	if dbType == dbclient.RdbmsDB2 {
-		dbHelper = Db2Helper{schemaName: schemaName, tableName: tableName}
+	if dbType == dbclient.DB2 {
+		dbHelper = DB2Helper{schemaName: schemaName, tableName: tableName}
 	} else {
-		dbHelper = PgHelper{schemaName: schemaName, tableName: tableName}
+		dbHelper = PGHelper{schemaName: schemaName, tableName: tableName}
 	}
 
 	logger := log.With().
@@ -43,21 +46,21 @@ func LobPerformanceExecuteTest(
 		Str("lob_type", lobType).
 		Logger()
 	if parallel <= 0 {
-		return fmt.Errorf("parallel must be > 0")
+		return errors.New("parallel must be > 0")
 	}
 	if warmupTime <= 0 {
-		warmupTime = 10
+		warmupTime = defaultWarmupTime
 	}
 	if executionTime <= 0 {
-		executionTime = 10
+		executionTime = defaultExecutionTime
 	}
 
-	seedInt, err := strconv.ParseInt(seed, 10, 64)
+	seedInt, err := strconv.ParseInt(seed, decimalSystem, bitSize64)
 	if err != nil {
 		return fmt.Errorf("seed must be an integer (got %q): %w", seed, err)
 	}
 
-	col := dbHelper.PayloadColumnForLobType(lobType)
+	col := dbHelper.PayloadColumnForLOBType(lobType)
 	if col == "" {
 		return fmt.Errorf("failed to determine column to select from based on lobType: %s", lobType)
 	}
@@ -73,7 +76,7 @@ func LobPerformanceExecuteTest(
 	}
 	defer metaConn.Close(ctx)
 
-	boundsSQL := dbHelper.SelectMinMaxIdSql()
+	boundsSQL := dbHelper.SelectMinMaxIDSQL()
 
 	bounds, err := metaConn.QueryOneRow(ctx, boundsSQL)
 	if err != nil {
@@ -94,7 +97,7 @@ func LobPerformanceExecuteTest(
 		return fmt.Errorf("no rows to test: min(id)=%d max(id)=%d", minID, maxID)
 	}
 
-	readSQL, err := dbHelper.SelectReadLobByIdSql(lobType)
+	readSQL, err := dbHelper.SelectReadLOBByIDSQL(lobType)
 	if err != nil {
 		return err
 	}
@@ -110,7 +113,8 @@ func LobPerformanceExecuteTest(
 	defer cancelTotal()
 
 	// RNG shared across workers (as you described).
-	rg, err := NewRandGenerator(int(minID), int(maxID), RandMode(readMode), seedInt+int64(parallel)) // +p to vary per p but remain reproducible
+	rg, err := NewRandGenerator(int(minID), int(maxID), RandMode(readMode),
+		seedInt+int64(parallel)) // +p to vary per p but remain reproducible
 	if err != nil {
 		return err
 	}
@@ -226,7 +230,7 @@ func LobPerformanceExecuteTest(
 }
 
 func getIntFromAnyNumberOutput(number any) (int64, error) {
-	var foundNumber int64 = 0
+	var foundNumber int64
 
 	switch v := number.(type) {
 	case int64:
@@ -236,13 +240,13 @@ func getIntFromAnyNumberOutput(number any) (int64, error) {
 	case int:
 		foundNumber = int64(v)
 	case []byte:
-		parsed, pErr := strconv.ParseInt(string(v), 10, 64)
+		parsed, pErr := strconv.ParseInt(string(v), decimalSystem, bitSize64)
 		if pErr != nil {
 			return 0, fmt.Errorf("failed to parse max_id: %w", pErr)
 		}
 		foundNumber = parsed
 	case string:
-		parsed, pErr := strconv.ParseInt(v, 10, 64)
+		parsed, pErr := strconv.ParseInt(v, decimalSystem, bitSize64)
 		if pErr != nil {
 			return 0, fmt.Errorf("failed to parse max_id: %w", pErr)
 		}

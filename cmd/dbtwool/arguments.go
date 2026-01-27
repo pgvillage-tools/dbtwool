@@ -96,7 +96,8 @@ var (
 		"parallel":      {short: "p", defValue: uint(1), argType: typeUInt, desc: `The degree of parallel execution`},
 		"warmupTime":    {short: "w", defValue: uint(1), argType: typeUInt, desc: `The test warmup time in seconds`},
 		"executionTime": {short: "x", defValue: uint(1), argType: typeUInt, desc: `The test execution time in seconds`},
-		"readMode":      {short: "m", defValue: "scattered", argType: typeString, desc: `How the reading of LOBs is distributed. 'scattered' or 'sequential'. leave empty for scattered.`},
+		"readMode": {short: "m", defValue: "scattered", argType: typeString,
+			desc: `How the reading of LOBs is distributed. 'scattered' or 'sequential'. leave empty for scattered.`},
 	}
 )
 

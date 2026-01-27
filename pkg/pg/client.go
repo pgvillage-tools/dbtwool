@@ -3,7 +3,7 @@ package pg
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pgvillage-tools/dbtwool/pkg/dbinterface"
@@ -26,9 +26,10 @@ func NewClient(connectionParams ConnParams) Client {
 	}
 }
 
+// ExecuteWithPayload executes a query with  payload
 func (c *Connection) ExecuteWithPayload(ctx context.Context, sql string, payload any, args ...any) (int64, error) {
 	if c.tx == nil {
-		return 0, fmt.Errorf("ExecuteWithPayload requires an active transaction; call Begin() first")
+		return 0, errors.New("ExecuteWithPayload requires an active transaction; call Begin() first")
 	}
 
 	allArgs := make([]any, 0, len(args)+1)

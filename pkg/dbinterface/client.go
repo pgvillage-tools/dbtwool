@@ -20,7 +20,7 @@ type Connection interface {
 	Begin(context.Context) error
 	Commit(context.Context) error
 	Execute(context.Context, string) (int64, error)
-	ExecuteWithPayload(context.Context, string, any, ...any) (int64, error) //ctx, query, payload, arguments
+	ExecuteWithPayload(context.Context, string, any, ...any) (int64, error) // ctx, query, payload, arguments
 	SetIsolationLevel(context.Context, IsolationLevel) error
 	QueryOneRow(context.Context, string, ...any) (map[string]any, error)
 	Rollback(context.Context) error

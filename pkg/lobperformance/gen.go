@@ -2,6 +2,7 @@ package lobperformance
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -10,7 +11,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type LobRowPlan struct {
+// LOBRowPlan defines a record for a LOB table row
+type LOBRowPlan struct {
 	RowIndex int64 // 0..N-1
 	TenantID int
 	LobType  string // "clob", "blob", ...
@@ -18,7 +20,10 @@ type LobRowPlan struct {
 	DocType  string
 }
 
-func LobPerformanceGenerate(dbType dbclient.Rdbms, ctx context.Context, client dbinterface.Client, schemaName string, tableName string, spread []string, emptyLobs int64, byteSize string, lobType string) {
+// Generate generates LOB data
+func Generate(ctx context.Context, dbType dbclient.RDBMS, client dbinterface.Client,
+	schemaName string, tableName string, spread []string, emptyLobs int64, byteSize string,
+	lobType string) {
 	var logger = log.With().Logger()
 
 	logger.Info().Msg("Initiating connection pool.")
@@ -34,12 +39,12 @@ func LobPerformanceGenerate(dbType dbclient.Rdbms, ctx context.Context, client d
 	}
 	defer conn.Close(ctx)
 
-	var dbHelper DbHelper = nil
+	var dbHelper DBHelper
 
-	if dbType == dbclient.RdbmsDB2 {
-		dbHelper = Db2Helper{schemaName: schemaName, tableName: tableName}
+	if dbType == dbclient.DB2 {
+		dbHelper = DB2Helper{schemaName: schemaName, tableName: tableName}
 	} else {
-		dbHelper = PgHelper{schemaName: schemaName, tableName: tableName}
+		dbHelper = PGHelper{schemaName: schemaName, tableName: tableName}
 	}
 
 	// Interpret byte size
@@ -62,34 +67,34 @@ func LobPerformanceGenerate(dbType dbclient.Rdbms, ctx context.Context, client d
 
 	logger.Info().Msg("Building LOB generation plan")
 
-	plan, err := BuildLobPlan(totalBytes, lobType, buckets, int64(emptyLobs))
+	plan, err := BuildLOBPlan(totalBytes, lobType, buckets, int64(emptyLobs))
 	if err != nil {
 		logger.Fatal().Msgf("Something went wrong building the LOB generation plan: %e", err)
 	}
 
 	logger.Info().Msgf("Building LOB generation plan finished. %v rows will be inserted.", len(plan))
 
-	batchSize := 100
+	const batchSize = 100
 	logger.Info().Msgf("Batch size set to %v", batchSize)
 
-	insertSQL, err := dbHelper.CreateInsertLobRowBaseSql(lobType)
+	insertSQL, err := dbHelper.CreateInsertLOBRowBaseSQL(lobType)
 	if err != nil {
 		logger.Fatal().Msgf("Could not establish base SQL insert query: %e", err)
 	}
-
-	idx := ShuffledIndices(len(plan), 12345)
+	const randomSeed = 12345
+	idx := ShuffledIndices(len(plan), randomSeed)
 
 	total := len(idx)
 
 	for start := 0; start < len(idx); start += batchSize {
 		end := min(start+batchSize, len(idx))
 
-		batch := make([]LobRowPlan, 0, end-start)
+		batch := make([]LOBRowPlan, 0, end-start)
 		for _, k := range idx[start:end] {
 			batch = append(batch, plan[k])
 		}
 
-		logger.Info().Msgf("Inserting Lobs %v to %v out of %v total", start+1, end, total)
+		logger.Info().Msgf("Inserting LOBs %v to %v out of %v total", start+1, end, total)
 		err := processLobBatch(ctx, conn, batch, start/batchSize, insertSQL)
 
 		if err != nil {
@@ -101,11 +106,10 @@ func LobPerformanceGenerate(dbType dbclient.Rdbms, ctx context.Context, client d
 func processLobBatch(
 	ctx context.Context,
 	conn dbinterface.Connection,
-	batch []LobRowPlan,
+	batch []LOBRowPlan,
 	batchIndex int,
-	insertSql string,
+	insertSQL string,
 ) error {
-
 	if len(batch) == 0 {
 		return nil
 	}
@@ -152,7 +156,7 @@ func processLobBatch(
 			return fmt.Errorf("create payload failed for row_index=%d: %w", row.RowIndex, err)
 		}
 
-		ra, err := conn.ExecuteWithPayload(ctx, insertSql, payload, row.TenantID, row.DocType)
+		ra, err := conn.ExecuteWithPayload(ctx, insertSQL, payload, row.TenantID, row.DocType)
 		if err != nil {
 			return fmt.Errorf("insert failed for row_index=%d: %w", row.RowIndex, err)
 		}
@@ -179,7 +183,7 @@ func processLobBatch(
 
 func createLobPayload(lobType string, size int64) (any, error) {
 	if size < 0 {
-		return nil, fmt.Errorf("lob size must be >= 0")
+		return nil, errors.New("lob size must be >= 0")
 	}
 
 	switch strings.ToLower(lobType) {

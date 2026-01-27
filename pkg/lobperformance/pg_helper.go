@@ -5,12 +5,14 @@ import (
 	"strings"
 )
 
-type PgHelper struct {
+// PGHelper is a helper for generating queries for PostgreSQL
+type PGHelper struct {
 	schemaName string
 	tableName  string
 }
 
-func (helper PgHelper) CreateSchemaSql() string {
+// CreateSchemaSQL returns a schema query
+func (helper PGHelper) CreateSchemaSQL() string {
 	sql := fmt.Sprintf(`
 CREATE SCHEMA IF NOT EXISTS %v;
 `, helper.schemaName)
@@ -19,7 +21,8 @@ CREATE SCHEMA IF NOT EXISTS %v;
 	return sql
 }
 
-func (helper PgHelper) CreateTableSql() string {
+// CreateTableSQL returns a table query to be used for CLOB data
+func (helper PGHelper) CreateTableSQL() string {
 	sql := fmt.Sprintf(`
 CREATE TABLE IF NOT EXISTS %v.%v (
   id            bigserial PRIMARY KEY,
@@ -35,8 +38,9 @@ CREATE TABLE IF NOT EXISTS %v.%v (
 	return sql
 }
 
-func (helper PgHelper) CreateInsertLobRowBaseSql(lobType string) (string, error) {
-	col := helper.PayloadColumnForLobType(lobType)
+// CreateInsertLOBRowBaseSQL returns a query for inserting LOB data
+func (helper PGHelper) CreateInsertLOBRowBaseSQL(lobType string) (string, error) {
+	col := helper.PayloadColumnForLOBType(lobType)
 	if col == "" {
 		return "", fmt.Errorf("unsupported lobType %q", lobType)
 	}
@@ -48,7 +52,8 @@ VALUES ($1, $2, $3);`, helper.schemaName, helper.tableName, col)
 	return sql, nil
 }
 
-func (helper PgHelper) SelectMinMaxIdSql() string {
+// SelectMinMaxIDSQL returns a query to fetch the min and max id of a table
+func (helper PGHelper) SelectMinMaxIDSQL() string {
 	sql := fmt.Sprintf(`
 SELECT
   MIN(id) AS min_id,
@@ -60,8 +65,9 @@ FROM %v.%v;
 	return sql
 }
 
-func (helper PgHelper) SelectReadLobByIdSql(lobType string) (string, error) {
-	col := helper.PayloadColumnForLobType(lobType)
+// SelectReadLOBByIDSQL returns a query to fetch a LOB
+func (helper PGHelper) SelectReadLOBByIDSQL(lobType string) (string, error) {
+	col := helper.PayloadColumnForLOBType(lobType)
 	if col == "" {
 		return "", fmt.Errorf("unsupported lobType %q", lobType)
 	}
@@ -76,7 +82,8 @@ WHERE id = $1;
 	return sql, nil
 }
 
-func (helper PgHelper) PayloadColumnForLobType(lobType string) string {
+// PayloadColumnForLOBType returns the payload type
+func (helper PGHelper) PayloadColumnForLOBType(lobType string) string {
 	switch strings.ToLower(lobType) {
 	case "clob", "text":
 		return "payload_text"

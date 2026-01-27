@@ -1,41 +1,46 @@
+// Package dbclient holds a helper to derive RDBMS type
 package dbclient
 
 import (
 	"strings"
 )
 
-type Rdbms string
+// RDBMS defines an ENUM
+type RDBMS string
 
 const (
-	RdbmsDB2      Rdbms = "db2"
-	RdbmsPostgres Rdbms = "pg"
+	// DB2 means DB2
+	DB2 RDBMS = "db2"
+	// Postgres means PostgreSQL
+	Postgres RDBMS = "pg"
 )
 
-// Map driver names to rdbms names
-var RdbmsDrivers = map[Rdbms]string{
-	RdbmsDB2:      "go_ibm_db",
-	RdbmsPostgres: "pgx",
+// Drivers defines all available driver names to rdbms names
+var Drivers = map[RDBMS]string{
+	DB2:      "go_ibm_db",
+	Postgres: "pgx",
 }
 
-// Helper to get the driver name safely
-func (r Rdbms) DriverName() (string, bool) {
-	d, ok := RdbmsDrivers[r]
+// DriverName is a helper to get the driver name safely
+func (r RDBMS) DriverName() (string, bool) {
+	d, ok := Drivers[r]
 	return d, ok
 }
 
-func GetRdbmsFromString(rdbmsText string) Rdbms {
-	var rdbms Rdbms
+// GetRDBMSFromString returns the RDBMS belonging to a RDBMS string
+func GetRDBMSFromString(rdbmsText string) RDBMS {
+	var rdbms RDBMS
 
 	switch strings.ToLower(rdbmsText) {
 	case "postgresql":
 	case "postgres":
 	case "pg":
-		rdbms = RdbmsPostgres
+		rdbms = Postgres
 	case "ibmdb":
 	case "db2":
-		rdbms = RdbmsDB2
+		rdbms = DB2
 	default:
-		rdbms = RdbmsPostgres
+		rdbms = Postgres
 	}
 
 	return rdbms

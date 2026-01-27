@@ -1,3 +1,4 @@
+// Package lobperformance handles all work regarding LOB performance tests
 package lobperformance
 
 import (
@@ -5,12 +6,14 @@ import (
 	"strings"
 )
 
-type Db2Helper struct {
+// DB2Helper is a helper to return queries for a specific RDBMS type
+type DB2Helper struct {
 	schemaName string
 	tableName  string
 }
 
-func (helper Db2Helper) CreateSchemaSql() string {
+// CreateSchemaSQL returns an RDBMS specific query to create a schema
+func (helper DB2Helper) CreateSchemaSQL() string {
 	sql := fmt.Sprintf(`
 CREATE SCHEMA %v;
 `, helper.schemaName)
@@ -19,7 +22,8 @@ CREATE SCHEMA %v;
 	return sql
 }
 
-func (helper Db2Helper) CreateTableSql() string {
+// CreateTableSQL returns a CREATE TABLE query for DB2
+func (helper DB2Helper) CreateTableSQL() string {
 	sql := fmt.Sprintf(`
 CREATE TABLE %v.%v (
   ID            BIGINT NOT NULL GENERATED ALWAYS AS IDENTITY (START WITH 1, INCREMENT BY 1),
@@ -36,8 +40,9 @@ CREATE TABLE %v.%v (
 	return sql
 }
 
-func (helper Db2Helper) CreateInsertLobRowBaseSql(lobType string) (string, error) {
-	col := helper.PayloadColumnForLobType(lobType)
+// CreateInsertLOBRowBaseSQL returns an INSERT LOB query
+func (helper DB2Helper) CreateInsertLOBRowBaseSQL(lobType string) (string, error) {
+	col := helper.PayloadColumnForLOBType(lobType)
 	if col == "" {
 		return "", fmt.Errorf("unsupported lobType %q", lobType)
 	}
@@ -49,7 +54,8 @@ VALUES (?, ?, ?);`, helper.schemaName, helper.tableName, col)
 	return sql, nil
 }
 
-func (helper Db2Helper) SelectMinMaxIdSql() string {
+// SelectMinMaxIDSQL returns a query for the min and max ID's in a table
+func (helper DB2Helper) SelectMinMaxIDSQL() string {
 	sql := fmt.Sprintf(`
 SELECT
   MIN(id) AS min_id,
@@ -61,8 +67,9 @@ FROM %v.%v;
 	return sql
 }
 
-func (helper Db2Helper) SelectReadLobByIdSql(lobType string) (string, error) {
-	col := helper.PayloadColumnForLobType(lobType)
+// SelectReadLOBByIDSQL returns the query to return a LOB
+func (helper DB2Helper) SelectReadLOBByIDSQL(lobType string) (string, error) {
+	col := helper.PayloadColumnForLOBType(lobType)
 	if col == "" {
 		return "", fmt.Errorf("unsupported lobType %q", lobType)
 	}
@@ -78,7 +85,8 @@ WHERE id = ?;
 	return sql, nil
 }
 
-func (helper Db2Helper) PayloadColumnForLobType(lobType string) string {
+// PayloadColumnForLOBType returns the payload type for a specific RDBMS
+func (helper DB2Helper) PayloadColumnForLOBType(lobType string) string {
 	switch strings.ToLower(lobType) {
 	case "clob", "text":
 		return "payload_text"
