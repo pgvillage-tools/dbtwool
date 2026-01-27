@@ -2,6 +2,7 @@ package pg
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/pgvillage-tools/dbtwool/pkg/dbinterface"
@@ -82,12 +83,15 @@ func (c *Connection) Query(ctx context.Context, query string, args ...any) ([]ma
 
 // QueryOneRow executes a query and expects one row, or fails. On success it returns the row.
 func (c *Connection) QueryOneRow(ctx context.Context, query string, args ...any) (map[string]any, error) {
-	rows, queryErr := c.Query(ctx, query, args...)
-	if queryErr != nil {
-		logger.Fatal().Msgf("error while executing olap query %v", queryErr)
+	rows, err := c.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("QueryOneRow query failed: %w", err)
 	}
-	if len(rows) != 1 {
-		logger.Fatal().Msgf("expected 1 row on olap query: %v", queryErr)
+	if len(rows) == 0 {
+		return nil, fmt.Errorf("QueryOneRow expected 1 row, got 0")
+	}
+	if len(rows) > 1 {
+		return nil, fmt.Errorf("QueryOneRow expected 1 row, got %d", len(rows))
 	}
 	return rows[0], nil
 }

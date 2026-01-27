@@ -37,7 +37,7 @@ CREATE TABLE %v.%v (
 }
 
 func (helper Db2Helper) CreateInsertLobRowBaseSql(lobType string) (string, error) {
-	col := payloadColumnForLobTypeDb2(lobType)
+	col := helper.PayloadColumnForLobType(lobType)
 	if col == "" {
 		return "", fmt.Errorf("unsupported lobType %q", lobType)
 	}
@@ -49,7 +49,36 @@ VALUES (?, ?, ?);`, helper.schemaName, helper.tableName, col)
 	return sql, nil
 }
 
-func payloadColumnForLobTypeDb2(lobType string) string {
+func (helper Db2Helper) SelectMinMaxIdSql() string {
+	sql := fmt.Sprintf(`
+SELECT
+  MIN(id) AS min_id,
+  MAX(id) AS max_id
+FROM %v.%v;
+`, helper.schemaName, helper.tableName)
+
+	logger.Debug().Msg(sql)
+	return sql
+}
+
+func (helper Db2Helper) SelectReadLobByIdSql(lobType string) (string, error) {
+	col := helper.PayloadColumnForLobType(lobType)
+	if col == "" {
+		return "", fmt.Errorf("unsupported lobType %q", lobType)
+	}
+
+	// DB2 uses '?' parameter markers
+	sql := fmt.Sprintf(`
+SELECT %v
+FROM %v.%v
+WHERE id = ?;
+`, col, helper.schemaName, helper.tableName)
+
+	logger.Debug().Msg(sql)
+	return sql, nil
+}
+
+func (helper Db2Helper) PayloadColumnForLobType(lobType string) string {
 	switch strings.ToLower(lobType) {
 	case "clob", "text":
 		return "payload_text"

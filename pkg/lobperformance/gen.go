@@ -69,7 +69,7 @@ func LobPerformanceGenerate(dbType dbclient.Rdbms, ctx context.Context, client d
 
 	logger.Info().Msgf("Building LOB generation plan finished. %v rows will be inserted.", len(plan))
 
-	batchSize := 1000
+	batchSize := 100
 	logger.Info().Msgf("Batch size set to %v", batchSize)
 
 	insertSQL, err := dbHelper.CreateInsertLobRowBaseSql(lobType)

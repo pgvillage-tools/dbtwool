@@ -86,7 +86,6 @@ func lobGenCommand() *cobra.Command {
 			} else {
 				fmt.Printf("An error occurred while parsing the schema + table: %e", err)
 			}
-
 		},
 	}
 
@@ -101,18 +100,37 @@ func lobTestCommand() *cobra.Command {
 		Short: "run the test",
 		Long:  "Use this command to run the test on the earlier created data.",
 		Run: func(_ *cobra.Command, _ []string) {
-			fmt.Printf("lob-performance test: %d\n", testExecutionArgs.GetUint("parallel"))
-			fmt.Printf("lob-performance test: %s\n", testExecutionArgs.GetString("table"))
-			fmt.Printf("lob-performance test: %s\n", testExecutionArgs.GetString("randomizerSeed"))
-			spread := testExecutionArgs.GetStringSlice("spread")
-			for i, v := range spread {
-				fmt.Printf("lob-performance test: #%d, %s\n", i, v)
+
+			schema, table, err := parseSchemaTable(testExecutionArgs.GetString("table"))
+
+			if err == nil {
+				params := pg.ConnParamsFromEnv()
+				postgresClient := pg.NewClient(params)
+
+				err := lobperformance.LobPerformanceExecuteTest(
+					dbclient.RdbmsPostgres,
+					context.Background(),
+					&postgresClient,
+					schema,
+					table,
+					testExecutionArgs.GetString("randomizerSeed"),
+					int(testExecutionArgs.GetUint("parallel")),
+					int(testExecutionArgs.GetUint("warmupTime")),
+					int(testExecutionArgs.GetUint("executionTime")),
+					testExecutionArgs.GetString("readMode"),
+					testExecutionArgs.GetString("lobType"))
+
+				if err != nil {
+					fmt.Printf("An error occurred while trying to execute the LOB performance test: %e", err)
+				}
+			} else {
+				fmt.Printf("An error occurred while parsing the schema + table: %e", err)
 			}
 		},
 	}
 
 	testExecutionArgs = arguments.AllArgs.CommandArgs(testExecutionCommand,
-		append(globalArgs, "parallel", "table", "spread", "randomizerSeed"))
+		append(globalArgs, "table", "randomizerSeed", "parallel", "warmupTime", "executionTime", "readMode", "lobType"))
 
 	return testExecutionCommand
 }
