@@ -26,7 +26,7 @@ threshold:
   # (optional; default 0)
   # Minimum overall project coverage percentage required.
   #  total: 80
-  total: 1
+  total: 2
 
 # Holds regexp rules which will override thresholds for matched files or packages
 # using their paths.
@@ -71,10 +71,6 @@ override:
     threshold: 0.0
   - path: ^pkg/pg/connection.go$
     threshold: 0.0
-  - path: ^pkg/pg/connparams.go$
-    threshold: 0.0
-  - path: ^pkg/pg/isolationlevel.go$
-    threshold: 0.0
 
   - path: ^pkg/dbclient/rdbms.go$
     threshold: 0.0
@@ -103,7 +99,7 @@ override:
   - path: ^pkg/dbinterface$
     threshold: 0.0
   - path: ^pkg/pg$  
-    threshold: 0.0
+    threshold: 5
   - path: ^pkg/dbclient$
     threshold: 0.0
   - path: ^pkg/lobperformance$
