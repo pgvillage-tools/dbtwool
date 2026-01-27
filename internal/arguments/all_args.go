@@ -5,7 +5,7 @@ var (
 	AllArgs = Args{
 		"cfgFile":        {short: "c", defValue: "config.yaml", argType: typePath, desc: `config file`},
 		"isolationLevel": {short: "i", defValue: "1", argType: typeString, desc: `Transaction isolation level`},
-		"spread":         {short: "s", defValue: "100%:8b", argType: typeStringArray, desc: `spread. By default everything is 8 bytes`},
+		"spread":         {short: "s", defValue: []string{"100%:8b"}, argType: typeStringArray, desc: `spread. By default everything is 8 bytes`},
 		"byteSize": {short: "b", defValue: "1kb", argType: typeString,
 			desc: `What the size of the datasource should be in b, kb, gb, etc.`},
 		"lobType": {short: "l", defValue: "LOB", argType: typeString,
