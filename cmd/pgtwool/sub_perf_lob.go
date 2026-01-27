@@ -48,7 +48,7 @@ func lobStageCommand() *cobra.Command {
 
 				lobperformance.Stage(context.Background(), dbclient.Postgres, &postgresClient, schema, table)
 			} else {
-				fmt.Printf("An error occurred while parsing the schema + table: %e", err)
+				fmt.Printf("An error occurred while parsing the schema + table: %v", err)
 			}
 		},
 	}
@@ -85,7 +85,7 @@ func lobGenCommand() *cobra.Command {
 					genArgs.GetString("byteSize"),
 					genArgs.GetString("lobType"))
 			} else {
-				fmt.Printf("An error occurred while parsing the schema + table: %e", err)
+				fmt.Printf("An error occurred while parsing the schema + table: %v", err)
 			}
 		},
 	}
@@ -123,10 +123,10 @@ func lobTestCommand() *cobra.Command {
 					testExecutionArgs.GetString("lobType"))
 
 				if err != nil {
-					fmt.Printf("An error occurred while trying to execute the LOB performance test: %e", err)
+					fmt.Printf("An error occurred while trying to execute the LOB performance test: %v", err)
 				}
 			} else {
-				fmt.Printf("An error occurred while parsing the schema + table: %e", err)
+				fmt.Printf("An error occurred while parsing the schema + table: %v", err)
 			}
 		},
 	}

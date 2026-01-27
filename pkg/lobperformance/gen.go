@@ -28,13 +28,13 @@ func Generate(ctx context.Context, dbType dbclient.RDBMS, client dbinterface.Cli
 	logger.Info().Msg("Initiating connection pool.")
 	pool, poolErr := client.Pool(ctx)
 	if poolErr != nil {
-		logger.Fatal().Msgf("Failed to connect: %e", poolErr)
+		logger.Fatal().Msgf("Failed to connect: %v", poolErr)
 	}
 
 	logger.Info().Msg("Connecting to database.")
 	conn, connectErr1 := pool.Connect(ctx) //
 	if connectErr1 != nil {
-		logger.Fatal().Msgf("connect error for connection 1: %e", connectErr1)
+		logger.Fatal().Msgf("connect error for connection 1: %v", connectErr1)
 	}
 	defer conn.Close(ctx)
 
@@ -65,7 +65,7 @@ func Generate(ctx context.Context, dbType dbclient.RDBMS, client dbinterface.Cli
 	logger.Info().Msg("Building LOB generation plan")
 	plan, err := BuildLOBPlan(totalBytes, lobType, buckets, int64(emptyLobs))
 	if err != nil {
-		logger.Fatal().Msgf("Something went wrong building the LOB generation plan: %e", err)
+		logger.Fatal().Msgf("Something went wrong building the LOB generation plan: %v", err)
 	}
 
 	logger.Info().Msgf("Building LOB generation plan finished. %v rows will be inserted.", len(plan))
@@ -74,7 +74,7 @@ func Generate(ctx context.Context, dbType dbclient.RDBMS, client dbinterface.Cli
 
 	insertSQL, err := dbHelper.CreateInsertLOBRowBaseSQL(lobType)
 	if err != nil {
-		logger.Fatal().Msgf("Could not establish base SQL insert query: %e", err)
+		logger.Fatal().Msgf("Could not establish base SQL insert query: %v", err)
 	}
 	const randomSeed = 12345
 	idx := ShuffledIndices(len(plan), randomSeed)
@@ -93,7 +93,7 @@ func Generate(ctx context.Context, dbType dbclient.RDBMS, client dbinterface.Cli
 		err := processLobBatch(ctx, conn, batch, start/batchSize, insertSQL)
 
 		if err != nil {
-			logger.Fatal().Msgf("Something went wrong while processing the LOB batch %e", err)
+			logger.Fatal().Msgf("Something went wrong while processing the LOB batch %v", err)
 		}
 	}
 }

@@ -16,13 +16,13 @@ func Stage(ctx context.Context, dbType dbclient.RDBMS, client dbinterface.Client
 	logger.Info().Msg("Initiating connection pool.")
 	pool, poolErr := client.Pool(ctx)
 	if poolErr != nil {
-		logger.Fatal().Msgf("Failed to connect: %e", poolErr)
+		logger.Fatal().Msgf("Failed to connect: %v", poolErr)
 	}
 
 	logger.Info().Msg("Connecting to database.")
 	conn, connectErr1 := pool.Connect(ctx) //
 	if connectErr1 != nil {
-		logger.Fatal().Msgf("connect error for connection 1: %e", connectErr1)
+		logger.Fatal().Msgf("connect error for connection 1: %v", connectErr1)
 	}
 	defer conn.Close(ctx)
 
