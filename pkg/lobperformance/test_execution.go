@@ -29,7 +29,6 @@ func ExecuteTest(
 	readMode string,
 	lobType string,
 ) error {
-
 	dbHelper := newDBHelper(dbType, schemaName, tableName)
 
 	logger := log.With().
@@ -169,7 +168,6 @@ func runReaders(
 	warmupTime int,
 	executionTime int,
 ) (time.Time, int64, error) {
-
 	// Warmup ctx
 	warmupCtx, cancelWarmup := context.WithTimeout(parent, time.Duration(warmupTime)*time.Second)
 	defer cancelWarmup()
@@ -200,7 +198,6 @@ func runReaders(
 			if err := totalCtx.Err(); err != nil {
 				return nil
 			}
-
 			id := safeRng.NextRand()
 			row, qErr := conn.QueryOneRow(totalCtx, readSQL, int64(id))
 			if qErr != nil {
@@ -209,14 +206,11 @@ func runReaders(
 				}
 				return fmt.Errorf("worker %d read failed (id=%d): %w", workerID, id, qErr)
 			}
-
 			v, ok := row[col]
 			if !ok {
 				return fmt.Errorf("worker %d: column %q not found in result", workerID, col)
 			}
-
 			touchValue(v)
-
 			if measuring.Load() == 1 {
 				readCount.Add(1)
 				startOnce.Do(func() { startTime = time.Now() })
@@ -244,7 +238,6 @@ func runReaders(
 	if firstErr != nil {
 		return time.Time{}, 0, firstErr
 	}
-
 	return startTime, readCount.Load(), nil
 }
 
