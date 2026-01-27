@@ -89,6 +89,8 @@ var (
 			desc: `What type of large object. (LOB, CLOB, JSONB, etc.)`},
 		"emptyLobs": {short: "e", defValue: uint(0), argType: typeUInt,
 			desc: `How many rows of empty lobs to generate`},
+		"randomizerSeed": {short: "r", argType: typeString,
+			desc: `seed to use for reproducability of the tests. Leave empty for random seed.`},
 		"table": {short: "t", defValue: "dbtwooltests.lobtable", argType: typeString,
 			desc: `What the schema + table name should be`},
 		"parallel": {short: "p", defValue: uint(1), argType: typeUInt, desc: `The degree of parallel execution`},

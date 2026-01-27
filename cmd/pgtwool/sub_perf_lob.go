@@ -64,6 +64,9 @@ func lobGenCommand() *cobra.Command {
 		Short: "generate all the things",
 		Long:  "Use this command to generate data to test with.",
 		Run: func(_ *cobra.Command, _ []string) {
+			fmt.Printf("lob-performance test: %s\n", genArgs.GetString("randomizerSeed"))
+
+			//not used yet
 			schema, table, err := parseSchemaTable(genArgs.GetString("table"))
 
 			if err == nil {
@@ -87,7 +90,7 @@ func lobGenCommand() *cobra.Command {
 		},
 	}
 
-	genArgs = arguments.AllArgs.CommandArgs(genCommand, append(globalArgs, "spread", "byteSize", "table", "emptyLobs", "lobType"))
+	genArgs = arguments.AllArgs.CommandArgs(genCommand, append(globalArgs, "spread", "byteSize", "table", "emptyLobs", "lobType", "randomizerSeed"))
 	return genCommand
 }
 
@@ -100,6 +103,7 @@ func lobTestCommand() *cobra.Command {
 		Run: func(_ *cobra.Command, _ []string) {
 			fmt.Printf("lob-performance test: %d\n", testExecutionArgs.GetUint("parallel"))
 			fmt.Printf("lob-performance test: %s\n", testExecutionArgs.GetString("table"))
+			fmt.Printf("lob-performance test: %s\n", testExecutionArgs.GetString("randomizerSeed"))
 			spread := testExecutionArgs.GetStringSlice("spread")
 			for i, v := range spread {
 				fmt.Printf("lob-performance test: #%d, %s\n", i, v)
@@ -108,7 +112,7 @@ func lobTestCommand() *cobra.Command {
 	}
 
 	testExecutionArgs = arguments.AllArgs.CommandArgs(testExecutionCommand,
-		append(globalArgs, "parallel", "table", "spread"))
+		append(globalArgs, "parallel", "table", "spread", "randomizerSeed"))
 
 	return testExecutionCommand
 }
