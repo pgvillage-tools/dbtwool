@@ -29,15 +29,8 @@ func ExecuteTest(
 	readMode string,
 	lobType string,
 ) error {
-	// This dbhelper logic should be moved to things outside this package.
-	// Where client specific logic lives
-	var dbHelper DBHelper
 
-	if dbType == dbclient.DB2 {
-		dbHelper = DB2Helper{schemaName: schemaName, tableName: tableName}
-	} else {
-		dbHelper = PGHelper{schemaName: schemaName, tableName: tableName}
-	}
+	dbHelper := newDBHelper(dbType, schemaName, tableName)
 
 	logger := log.With().
 		Str("schema", schemaName).
@@ -45,19 +38,15 @@ func ExecuteTest(
 		Str("read_mode", readMode).
 		Str("lob_type", lobType).
 		Logger()
-	if parallel <= 0 {
-		return errors.New("parallel must be > 0")
-	}
-	if warmupTime <= 0 {
-		warmupTime = defaultWarmupTime
-	}
-	if executionTime <= 0 {
-		executionTime = defaultExecutionTime
+
+	parallel, warmupTime, executionTime, err := normalizeArgs(parallel, warmupTime, executionTime)
+	if err != nil {
+		return err
 	}
 
-	seedInt, err := strconv.ParseInt(seed, decimalSystem, bitSize64)
+	seedInt, err := parseSeed(seed)
 	if err != nil {
-		return fmt.Errorf("seed must be an integer (got %q): %w", seed, err)
+		return err
 	}
 
 	col := dbHelper.PayloadColumnForLOBType(lobType)
@@ -65,9 +54,9 @@ func ExecuteTest(
 		return fmt.Errorf("failed to determine column to select from based on lobType: %s", lobType)
 	}
 
-	pool, poolErr := client.Pool(ctx)
-	if poolErr != nil {
-		return fmt.Errorf("failed to init pool: %w", poolErr)
+	pool, err := client.Pool(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to init pool: %w", err)
 	}
 
 	metaConn, err := pool.Connect(ctx)
@@ -76,25 +65,9 @@ func ExecuteTest(
 	}
 	defer metaConn.Close(ctx)
 
-	boundsSQL := dbHelper.SelectMinMaxIDSQL()
-
-	bounds, err := metaConn.QueryOneRow(ctx, boundsSQL)
+	minID, maxID, err := fetchMinMaxIDs(ctx, metaConn, dbHelper)
 	if err != nil {
-		return fmt.Errorf("failed to query min/max(id): %w", err)
-	}
-
-	minID, err := getIntFromAnyNumberOutput(bounds["min_id"])
-	if err != nil {
-		return fmt.Errorf("failed to parse min_id: %w", err)
-	}
-
-	maxID, err := getIntFromAnyNumberOutput(bounds["max_id"])
-	if err != nil {
-		return fmt.Errorf("failed to parse max_id: %w", err)
-	}
-
-	if minID <= 0 || maxID <= 0 || maxID < minID {
-		return fmt.Errorf("no rows to test: min(id)=%d max(id)=%d", minID, maxID)
+		return err
 	}
 
 	readSQL, err := dbHelper.SelectReadLOBByIDSQL(lobType)
@@ -104,29 +77,118 @@ func ExecuteTest(
 
 	logger.Info().Msgf("Starting read test with parallel=%d (max_id=%d)", parallel, maxID)
 
-	// Warmup ctx: warmupTime
-	warmupCtx, cancelWarmup := context.WithTimeout(ctx, time.Duration(warmupTime)*time.Second)
-	defer cancelWarmup()
-
-	// Total ctx: warmup + execution
-	totalCtx, cancelTotal := context.WithTimeout(ctx, time.Duration(warmupTime+executionTime)*time.Second)
-	defer cancelTotal()
-
-	// RNG shared across workers (as you described).
-	rg, err := NewRandGenerator(int(minID), int(maxID), RandMode(readMode),
-		seedInt+int64(parallel)) // +p to vary per p but remain reproducible
+	startTime, reads, err := runReaders(
+		ctx,
+		pool,
+		readSQL,
+		col,
+		int(minID),
+		int(maxID),
+		readMode,
+		seedInt+int64(parallel),
+		parallel,
+		warmupTime,
+		executionTime,
+	)
 	if err != nil {
 		return err
 	}
+
+	readsPerSec := computeReadsPerSec(startTime, reads, executionTime)
+
+	logger.Info().
+		Int("parallel", parallel).
+		Int64("reads", reads).
+		Float64("reads_per_sec", readsPerSec).
+		Str("column", col).
+		Msg("Read test finished")
+
+	return nil
+}
+
+func newDBHelper(dbType dbclient.RDBMS, schema, table string) DBHelper {
+	if dbType == dbclient.DB2 {
+		return DB2Helper{schemaName: schema, tableName: table}
+	}
+	return PGHelper{schemaName: schema, tableName: table}
+}
+
+func normalizeArgs(parallel, warmupTime, executionTime int) (int, int, int, error) {
+	if parallel <= 0 {
+		return 0, 0, 0, errors.New("parallel must be > 0")
+	}
+	if warmupTime <= 0 {
+		warmupTime = defaultWarmupTime
+	}
+	if executionTime <= 0 {
+		executionTime = defaultExecutionTime
+	}
+	return parallel, warmupTime, executionTime, nil
+}
+
+func parseSeed(seed string) (int64, error) {
+	seedInt, err := strconv.ParseInt(seed, decimalSystem, bitSize64)
+	if err != nil {
+		return 0, fmt.Errorf("seed must be an integer (got %q): %w", seed, err)
+	}
+	return seedInt, nil
+}
+
+func fetchMinMaxIDs(ctx context.Context, conn dbinterface.Connection, helper DBHelper) (int64, int64, error) {
+	bounds, err := conn.QueryOneRow(ctx, helper.SelectMinMaxIDSQL())
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to query min/max(id): %w", err)
+	}
+
+	minID, err := getIntFromAnyNumberOutput(bounds["min_id"])
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to parse min_id: %w", err)
+	}
+	maxID, err := getIntFromAnyNumberOutput(bounds["max_id"])
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to parse max_id: %w", err)
+	}
+
+	if minID <= 0 || maxID <= 0 || maxID < minID {
+		return 0, 0, fmt.Errorf("no rows to test: min(id)=%d max(id)=%d", minID, maxID)
+	}
+
+	return minID, maxID, nil
+}
+
+func runReaders(
+	parent context.Context,
+	pool dbinterface.Pool,
+	readSQL string,
+	col string,
+	minID int,
+	maxID int,
+	readMode string,
+	rngSeed int64,
+	parallel int,
+	warmupTime int,
+	executionTime int,
+) (time.Time, int64, error) {
+
+	// Warmup ctx
+	warmupCtx, cancelWarmup := context.WithTimeout(parent, time.Duration(warmupTime)*time.Second)
+	defer cancelWarmup()
+
+	// Total ctx
+	totalCtx, cancelTotal := context.WithTimeout(parent, time.Duration(warmupTime+executionTime)*time.Second)
+	defer cancelTotal()
+
+	rg, err := NewRandGenerator(minID, maxID, RandMode(readMode), rngSeed)
+	if err != nil {
+		return time.Time{}, 0, err
+	}
 	safeRng := NewSafeRandGenerator(rg)
 
-	var measuring atomic.Int32 // 0 warmup, 1 measure
+	var measuring atomic.Int32
 	var readCount atomic.Int64
-
 	var startTime time.Time
 	var startOnce sync.Once
 
-	// Worker function: each worker uses its own DB connection
 	worker := func(workerID int) error {
 		conn, err := pool.Connect(totalCtx)
 		if err != nil {
@@ -135,16 +197,13 @@ func ExecuteTest(
 		defer conn.Close(totalCtx)
 
 		for {
-			select {
-			case <-totalCtx.Done():
+			if err := totalCtx.Err(); err != nil {
 				return nil
-			default:
 			}
 
 			id := safeRng.NextRand()
 			row, qErr := conn.QueryOneRow(totalCtx, readSQL, int64(id))
 			if qErr != nil {
-				// If we're stopping due to context timeout/cancel, that's normal.
 				if totalCtx.Err() != nil {
 					return nil
 				}
@@ -156,22 +215,8 @@ func ExecuteTest(
 				return fmt.Errorf("worker %d: column %q not found in result", workerID, col)
 			}
 
-			// Touch the bytes so the LOB is actually materialized
-			switch t := v.(type) {
-			case []byte:
-				if len(t) > 0 {
-					_ = t[0]
-				}
-			case string:
-				if len(t) > 0 {
-					_ = t[0]
-				}
-			case nil:
-			default:
-				_ = fmt.Sprintf("%v", t)
-			}
+			touchValue(v)
 
-			// Count only after warmup
 			if measuring.Load() == 1 {
 				readCount.Add(1)
 				startOnce.Do(func() { startTime = time.Now() })
@@ -179,23 +224,17 @@ func ExecuteTest(
 		}
 	}
 
-	// Launch workers
 	errCh := make(chan error, parallel)
 	for i := 0; i < parallel; i++ {
 		workerID := i
-		go func() {
-			errCh <- worker(workerID)
-		}()
+		go func() { errCh <- worker(workerID) }()
 	}
 
-	// Wait for warmup to end, then start measuring
 	<-warmupCtx.Done()
 	measuring.Store(1)
 
-	// Wait for total (warmup+execution) to end
 	<-totalCtx.Done()
 
-	// Collect worker errors
 	var firstErr error
 	for i := 0; i < parallel; i++ {
 		if wErr := <-errCh; wErr != nil && firstErr == nil {
@@ -203,30 +242,38 @@ func ExecuteTest(
 		}
 	}
 	if firstErr != nil {
-		return firstErr
+		return time.Time{}, 0, firstErr
 	}
 
-	reads := readCount.Load()
+	return startTime, readCount.Load(), nil
+}
 
+func touchValue(v any) {
+	switch t := v.(type) {
+	case []byte:
+		if len(t) > 0 {
+			_ = t[0]
+		}
+	case string:
+		if len(t) > 0 {
+			_ = t[0]
+		}
+	case nil:
+		return
+	default:
+		_ = fmt.Sprintf("%v", t)
+	}
+}
+
+func computeReadsPerSec(startTime time.Time, reads int64, executionTime int) float64 {
 	if startTime.IsZero() {
 		startTime = time.Now().Add(-time.Duration(executionTime) * time.Second)
 	}
-
 	elapsed := time.Since(startTime)
 	if elapsed <= 0 {
 		elapsed = time.Duration(executionTime) * time.Second
 	}
-
-	readsPerSec := float64(reads) / elapsed.Seconds()
-
-	logger.Info().
-		Int("parallel", parallel).
-		Int64("reads", reads).
-		Float64("reads_per_sec", readsPerSec).
-		Str("column", col).
-		Msg("Read test finished")
-
-	return nil
+	return float64(reads) / elapsed.Seconds()
 }
 
 func getIntFromAnyNumberOutput(number any) (int64, error) {
