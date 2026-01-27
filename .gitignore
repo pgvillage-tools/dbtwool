@@ -35,3 +35,5 @@ go.work.sum
 
 database
 scripts/set_windows_envs.ps1
+
+dbtwool
