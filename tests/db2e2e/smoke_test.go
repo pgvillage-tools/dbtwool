@@ -3,7 +3,6 @@ package db2e2e_test
 
 import (
 	"context"
-	"fmt"
 	"os"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -80,19 +79,40 @@ var _ = Describe("Smoke", Ordered, func() {
 		}
 		Ω(nw.Remove(ctx)).NotTo(HaveOccurred())
 	})
+	/*
+		Context("when running consistency check", func() {
+			It("should work properly", func() {
+				// run dbtwool consistency check
+				dbtwoolCnt, initErr := runDbwTool(
+					ctx,
+					nw,
+					db2Env,
+					"consistency")
+				Ω(initErr).NotTo(HaveOccurred())
+				allContainers = append(allContainers, dbtwoolCnt)
+				dbtwoolLogs, logErr := containerLogs(ctx, dbtwoolCnt)
+				Ω(logErr).NotTo(HaveOccurred())
+				Ω(dbtwoolLogs).To(MatchRegexp("info.*finished"))
+			})
+		})
+	*/
 	Context("when running consistency check", func() {
 		It("should work properly", func() {
 			// run dbtwool consistency check
-			dbtwoolCnt, initErr := runDbwTool(
-				ctx,
-				nw,
-				db2Env,
-				"consistency")
-			Ω(initErr).NotTo(HaveOccurred())
-			allContainers = append(allContainers, dbtwoolCnt)
-			dbtwoolLogs, logErr := containerLogs(ctx, dbtwoolCnt)
-			Ω(logErr).NotTo(HaveOccurred())
-			fmt.Println("Container logs:", dbtwoolLogs)
+			for _, jobType := range []string{"ru-performance", "lob-performance"} {
+				for _, phase := range []string{"stage", "gen", "test"} {
+					dbtwoolCnt, initErr := runDbwTool(
+						ctx,
+						nw,
+						db2Env,
+						jobType, phase)
+					Ω(initErr).NotTo(HaveOccurred())
+					allContainers = append(allContainers, dbtwoolCnt)
+					dbtwoolLogs, logErr := containerLogs(ctx, dbtwoolCnt)
+					Ω(logErr).NotTo(HaveOccurred())
+					Ω(dbtwoolLogs).To(MatchRegexp(".*info.*finished.*"))
+				}
+			}
 		})
 	})
 })

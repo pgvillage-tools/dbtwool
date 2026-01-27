@@ -8,7 +8,6 @@ import (
 	"os"
 	"strings"
 
-	. "github.com/onsi/ginkgo/v2"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
@@ -24,6 +23,7 @@ func containerLogs(ctx context.Context, cnt testcontainers.Container) (string, e
 	return buf.String(), nil
 }
 
+/*
 func debugContainerLogs(ctx context.Context, cnt testcontainers.Container) error {
 	logs, err := containerLogs(ctx, cnt)
 	if err != nil {
@@ -34,6 +34,7 @@ func debugContainerLogs(ctx context.Context, cnt testcontainers.Container) error
 	}
 	return nil
 }
+*/
 
 func runDbwTool(
 	ctx context.Context,
@@ -53,6 +54,7 @@ func runDbwTool(
 					Dockerfile:     "Dockerfile.pg",
 					BuildLogWriter: os.Stdout,
 				},
+				WaitingFor: &wait.ExitStrategy{},
 			},
 			Started: true,
 		})

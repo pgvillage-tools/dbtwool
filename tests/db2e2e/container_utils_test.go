@@ -43,6 +43,7 @@ func runDbwTool(
 					Dockerfile:     "Dockerfile.db2",
 					BuildLogWriter: os.Stdout,
 				},
+				WaitingFor: &wait.ExitStrategy{},
 			},
 			Started: true,
 		})
