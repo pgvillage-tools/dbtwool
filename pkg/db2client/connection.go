@@ -50,10 +50,10 @@ func (c *Connection) Query(ctx context.Context, query string, args ...any) ([]ma
 func (c *Connection) QueryOneRow(ctx context.Context, query string, args ...any) (map[string]any, error) {
 	rows, queryErr := c.Query(ctx, query, args...)
 	if queryErr != nil {
-		logger.Fatal().Msgf("error while executing olap query %v", queryErr)
+		return nil, fmt.Errorf("error while executing olap query %v", queryErr)
 	}
 	if len(rows) != 1 {
-		logger.Fatal().Msgf("expected 1 row on olap query: %v", queryErr)
+		return nil, fmt.Errorf("expected 1 row on olap query: %v", queryErr)
 	}
 	return rows[0], nil
 }
