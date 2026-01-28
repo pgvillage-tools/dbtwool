@@ -246,7 +246,8 @@ func uint64ToBytes(v uint64) []byte {
 
 func asciiEncodeInPlace(buf []byte) {
 	const alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_"
+	const alphabetMask = byte(len(alphabet) - 1)
 	for i := range buf {
-		buf[i] = alphabet[buf[i]&63]
+		buf[i] = alphabet[buf[i]&alphabetMask]
 	}
 }
