@@ -6,7 +6,7 @@ import (
 	"github.com/pgvillage-tools/dbtwool/pkg/utils"
 )
 
-// ConnParams objects define connection parameters for a DB2 connection
+// ConnParams objects define connection parameters for a PostgreSQL connection
 type ConnParams struct {
 	Host     string
 	Port     string

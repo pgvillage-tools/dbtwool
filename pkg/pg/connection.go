@@ -95,6 +95,23 @@ func (c *Connection) Rollback(ctx context.Context) error {
 	return nil
 }
 
+// ExecuteWithPayload executes a query with  payload
+func (c *Connection) ExecuteWithPayload(ctx context.Context, sql string, payload any, args ...any) (int64, error) {
+	if c.tx == nil {
+		return 0, errors.New("ExecuteWithPayload requires an active transaction; call Begin() first")
+	}
+
+	allArgs := make([]any, 0, len(args)+1)
+	allArgs = append(allArgs, args...)
+	allArgs = append(allArgs, payload)
+
+	ct, err := c.conn.Exec(ctx, sql, allArgs...)
+	if err != nil {
+		return 0, err
+	}
+	return ct.RowsAffected(), nil
+}
+
 func rowsToMaps(rows pgx.Rows) ([]map[string]any, error) {
 	defer rows.Close()
 
