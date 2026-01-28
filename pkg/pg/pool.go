@@ -2,9 +2,14 @@ package pg
 
 import (
 	"context"
+	"errors"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pgvillage-tools/dbtwool/pkg/dbinterface"
+)
+
+const (
+	pgTestQuery = "SELECT 1;"
 )
 
 // Pool is a wrapper around sql.DB, so we can add methods on top of it
@@ -20,4 +25,17 @@ func (p Pool) Connect(ctx context.Context) (dbinterface.Connection, error) {
 	}
 	pgConn := &Connection{conn: conn.Conn()}
 	return pgConn, nil
+}
+
+func (p Pool) validate(ctx context.Context) error {
+	if p.pool == nil {
+		return errors.New("cannot validate an uninitialized pool")
+	}
+	if err := p.pool.Ping(ctx); err != nil {
+		return err
+	}
+	if _, err := p.pool.Query(ctx, pgTestQuery); err != nil {
+		return err
+	}
+	return nil
 }
