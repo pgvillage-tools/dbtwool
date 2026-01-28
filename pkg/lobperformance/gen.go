@@ -195,12 +195,13 @@ func createLobPayload(lobType string, size int64) (any, error) {
 
 	switch strings.ToLower(lobType) {
 	case "clob", "text":
-		plain := make([]byte, size)
-		for i := range plain {
-			plain[i] = 'a'
+		buf := make([]byte, size)
+		for i := range buf {
+			buf[i] = 'a'
 		}
-		encryptInPlace(plain)
-		return string(plain), nil
+		encryptInPlace(buf)
+		asciiEncodeInPlace(buf)
+		return string(buf), nil
 
 	case "blob", "bytea":
 		b := make([]byte, size)
@@ -240,5 +241,13 @@ func uint64ToBytes(v uint64) []byte {
 		byte(v >> 16),
 		byte(v >> 8),
 		byte(v),
+	}
+}
+
+func asciiEncodeInPlace(buf []byte) {
+	const alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_"
+	const alphabetMask = byte(len(alphabet) - 1)
+	for i := range buf {
+		buf[i] = alphabet[buf[i]&alphabetMask]
 	}
 }
