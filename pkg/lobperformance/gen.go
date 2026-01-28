@@ -2,6 +2,7 @@ package lobperformance
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"strings"
@@ -181,17 +182,63 @@ func createLobPayload(lobType string, size int64) (any, error) {
 		return nil, errors.New("lob size must be >= 0")
 	}
 
+	if size == 0 {
+		switch strings.ToLower(lobType) {
+		case "clob", "text":
+			return "", nil
+		case "blob", "bytea":
+			return []byte{}, nil
+		default:
+			return nil, fmt.Errorf("unsupported lobType %q", lobType)
+		}
+	}
+
 	switch strings.ToLower(lobType) {
 	case "clob", "text":
-		// ASCII => len == bytes
-		return strings.Repeat("a", int(size)), nil
+		plain := make([]byte, size)
+		for i := range plain {
+			plain[i] = 'a'
+		}
+		encryptInPlace(plain)
+		return string(plain), nil
+
 	case "blob", "bytea":
 		b := make([]byte, size)
-		for i := int64(0); i < size; i++ {
+		for i := range b {
 			b[i] = byte(i)
 		}
+		encryptInPlace(b)
 		return b, nil
+
 	default:
 		return nil, fmt.Errorf("unsupported lobType %q", lobType)
+	}
+}
+
+func encryptInPlace(buf []byte) {
+	var counter uint64
+	offset := 0
+
+	for offset < len(buf) {
+		h := sha256.Sum256(uint64ToBytes(counter))
+		counter++
+
+		for i := 0; i < len(h) && offset < len(buf); i++ {
+			buf[offset] ^= h[i]
+			offset++
+		}
+	}
+}
+
+func uint64ToBytes(v uint64) []byte {
+	return []byte{
+		byte(v >> 56),
+		byte(v >> 48),
+		byte(v >> 40),
+		byte(v >> 32),
+		byte(v >> 24),
+		byte(v >> 16),
+		byte(v >> 8),
+		byte(v),
 	}
 }
