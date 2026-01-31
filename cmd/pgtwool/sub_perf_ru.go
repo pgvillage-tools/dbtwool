@@ -1,10 +1,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/pgvillage-tools/dbtwool/internal/arguments"
+	"github.com/pgvillage-tools/dbtwool/pkg/dbclient"
+	"github.com/pgvillage-tools/dbtwool/pkg/pg"
+	"github.com/pgvillage-tools/dbtwool/pkg/ruperformance"
 	"github.com/spf13/cobra"
 )
 
@@ -28,6 +32,31 @@ func ruCommand() *cobra.Command {
 
 	return ruPerformanceCommand
 }
+
+func ruStageCommand() *cobra.Command {
+	var stageArgs arguments.Args
+	stageCommand := &cobra.Command{
+		Use:   "stage",
+		Short: "create tables",
+		Long:  "Create the necessary schema and table(s)",
+		Run: func(_ *cobra.Command, _ []string) {
+			schema, table, err := parseSchemaTable(stageArgs.GetString("table"))
+
+			if err == nil {
+				params := pg.ConnParamsFromEnv()
+				postgresClient := pg.NewClient(params)
+
+				ruperformance.Stage(context.Background(), dbclient.Postgres, &postgresClient, schema, table)
+			} else {
+				fmt.Printf("An error occurred while parsing the schema + table: %v", err)
+			}
+		},
+	}
+
+	stageArgs = arguments.AllArgs.CommandArgs(stageCommand, append(globalArgs, "table"))
+
+	return stageCommand
+}
 func ruGenCommand() *cobra.Command {
 	var genCmdArgs arguments.Args
 	genCommand := &cobra.Command{
@@ -44,22 +73,6 @@ func ruGenCommand() *cobra.Command {
 
 	genCmdArgs = arguments.AllArgs.CommandArgs(genCommand, append(globalArgs, "spread", "byteSize", "table"))
 	return genCommand
-}
-
-func ruStageCommand() *cobra.Command {
-	var stageCmdArgs arguments.Args
-	stageCommand := &cobra.Command{
-		Use:   "stage",
-		Short: "create tables",
-		Long:  "Create the necessary schema and table(s)",
-		Run: func(_ *cobra.Command, _ []string) {
-			fmt.Println("stage:" + stageCmdArgs.GetString("table"))
-		},
-	}
-
-	stageCmdArgs = arguments.AllArgs.CommandArgs(stageCommand, append(globalArgs, "table"))
-
-	return stageCommand
 }
 
 func ruTestCommand() *cobra.Command {
