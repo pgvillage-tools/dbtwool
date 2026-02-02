@@ -50,7 +50,7 @@ func Generate(
 		logger.Fatal().Msg("numRows must be > 0")
 	}
 
-	const batchSize = 1000
+	const batchSize = 100
 	logger.Info().Msgf("Generating %d rows into %s.%s (batchSize=%d)", numRows, schemaName, tableName, batchSize)
 	insertPrefix := fmt.Sprintf("INSERT INTO %s.%s (acct_id, txn_ts, amount, descr) VALUES ", schemaName, tableName) //works on all relevent rdbms
 
