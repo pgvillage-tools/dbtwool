@@ -64,5 +64,4 @@ func Stage(ctx context.Context, dbType dbclient.RDBMS, client dbinterface.Client
 	conn.Commit(ctx)
 
 	logger.Info().Msg("Closing connection")
-	conn.Close(ctx)
 }

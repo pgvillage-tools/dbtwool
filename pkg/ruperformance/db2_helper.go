@@ -1,4 +1,3 @@
-// Package lobperformance handles all work regarding LOB performance tests
 package ruperformance
 
 import (
@@ -35,7 +34,7 @@ ORGANIZE BY ROW;`, helper.schemaName, helper.tableName)
 	return sql
 }
 
-// CreateTableSQL returns a CREATE TABLE query for DB2
+// CreateIndexSQL returns a CREATE INDEX query for DB2
 func (helper DB2Helper) CreateIndexSQL() string {
 	sql := fmt.Sprintf(`
 CREATE INDEX index_account_transaction_acct_%v
@@ -55,7 +54,7 @@ func (helper DB2Helper) CreateOlapSQL() string {
 SELECT COUNT(*) AS cnt, SUM(amount) AS total_amt
 FROM   %s.%s
 WHERE  acct_id = 50
-  AND  txn_ts >= (CURRENT TIMESTAMP - 60 MINUTES)
+  AND  txn_ts >= (CURRENT TIMESTAMP - 30 MINUTES)
 `, helper.schemaName, helper.tableName)
 }
 
@@ -64,6 +63,6 @@ func (helper DB2Helper) CreateOltpSQL(id int64) string {
 UPDATE %s.%s
    SET amount = amount + 1.00
  WHERE acct_id = %d
-   AND txn_ts >= (CURRENT TIMESTAMP - 60 MINUTES)
+   AND txn_ts >= (CURRENT TIMESTAMP - 30 MINUTES)
 `, helper.schemaName, helper.tableName, id)
 }

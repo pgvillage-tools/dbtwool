@@ -20,7 +20,7 @@ CREATE SCHEMA IF NOT EXISTS %v;
 	return sql
 }
 
-// CreateTableSQL returns a CREATE TABLE query for DB2
+// CreateTableSQL returns a CREATE TABLE query for PG
 func (helper PGHelper) CreateTableSQL() string {
 	sql := fmt.Sprintf(`
 CREATE TABLE %v.%v (
@@ -33,7 +33,7 @@ CREATE TABLE %v.%v (
 	return sql
 }
 
-// CreateTableSQL returns a CREATE TABLE query for DB2
+// CreateTableSQL returns a CREATE TABLE query for PG
 func (helper PGHelper) CreateIndexSQL() string {
 	sql := fmt.Sprintf(`
 CREATE INDEX index_account_transaction_acct_%v
@@ -53,7 +53,7 @@ func (helper PGHelper) CreateOlapSQL() string {
 SELECT COUNT(*) AS cnt, SUM(amount) AS total_amt
 FROM   %s.%s
 WHERE  acct_id BETWEEN 1 AND 50
-  AND  txn_ts >= (CURRENT_TIMESTAMP - INTERVAL '60 minutes')
+  AND  txn_ts >= (CURRENT_TIMESTAMP - INTERVAL '30 minutes')
 `, helper.schemaName, helper.tableName)
 }
 
@@ -62,6 +62,6 @@ func (helper PGHelper) CreateOltpSQL(id int64) string {
 UPDATE %s.%s
    SET amount = amount + 1.00
  WHERE acct_id = %d
-   AND txn_ts >= (CURRENT_TIMESTAMP - INTERVAL '60 minutes')
+   AND txn_ts >= (CURRENT_TIMESTAMP - INTERVAL '30 minutes')
 `, helper.schemaName, helper.tableName, id)
 }
