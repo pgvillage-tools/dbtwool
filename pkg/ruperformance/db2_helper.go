@@ -1,4 +1,3 @@
-// Package lobperformance handles all work regarding LOB performance tests
 package ruperformance
 
 import (
@@ -35,7 +34,7 @@ ORGANIZE BY ROW;`, helper.schemaName, helper.tableName)
 	return sql
 }
 
-// CreateTableSQL returns a CREATE TABLE query for DB2
+// CreateIndexSQL returns a CREATE INDEX query for DB2
 func (helper DB2Helper) CreateIndexSQL() string {
 	sql := fmt.Sprintf(`
 CREATE INDEX index_account_transaction_acct
