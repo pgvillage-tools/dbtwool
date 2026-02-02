@@ -6,4 +6,6 @@ type DBHelper interface {
 	CreateTableSQL() string
 	CreateIndexSQL() string
 	CreateInserSQLPrefix() string
+	CreateOlapSQL() string
+	CreateOltpSQL(int64) string
 }

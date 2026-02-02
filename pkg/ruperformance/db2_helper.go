@@ -38,8 +38,8 @@ ORGANIZE BY ROW;`, helper.schemaName, helper.tableName)
 // CreateTableSQL returns a CREATE TABLE query for DB2
 func (helper DB2Helper) CreateIndexSQL() string {
 	sql := fmt.Sprintf(`
-CREATE INDEX index_account_transaction_acct
-    ON %v.%v (acct_id, txn_ts);`, helper.schemaName, helper.tableName)
+CREATE INDEX index_account_transaction_acct_%v
+    ON %v.%v (acct_id, txn_ts);`, helper.tableName, helper.schemaName, helper.tableName)
 	logger.Debug().Msg(sql)
 	return sql
 }
@@ -48,4 +48,22 @@ func (helper DB2Helper) CreateInserSQLPrefix() string {
 	sql := fmt.Sprintf("INSERT INTO %s.%s (acct_id, txn_ts, amount, filler) VALUES (?, ?, ?, ?)", helper.schemaName, helper.tableName)
 	logger.Debug().Msg(sql)
 	return sql
+}
+
+func (helper DB2Helper) CreateOlapSQL() string {
+	return fmt.Sprintf(`
+SELECT COUNT(*) AS cnt, SUM(amount) AS total_amt
+FROM   %s.%s
+WHERE  acct_id = 50
+  AND  txn_ts >= (CURRENT TIMESTAMP - 60 MINUTES)
+`, helper.schemaName, helper.tableName)
+}
+
+func (helper DB2Helper) CreateOltpSQL(id int64) string {
+	return fmt.Sprintf(`
+UPDATE %s.%s
+   SET amount = amount + 1.00
+ WHERE acct_id = %d
+   AND txn_ts >= (CURRENT TIMESTAMP - 60 MINUTES)
+`, helper.schemaName, helper.tableName, id)
 }

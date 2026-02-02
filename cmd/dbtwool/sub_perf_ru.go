@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	db2 "github.com/pgvillage-tools/dbtwool/pkg/db2client"
@@ -86,18 +87,45 @@ func ruGenCommand() *cobra.Command {
 }
 
 func ruTestCommand() *cobra.Command {
-	var testCmdArgs args
+	var testExecutionArgs args
 	testExecutionCommand := &cobra.Command{
 		Use:   "test",
 		Short: "run the test",
 		Long:  "Use this command to run the test on the earlier created data.",
 		Run: func(_ *cobra.Command, _ []string) {
-			fmt.Printf("test: %d\n", testCmdArgs.GetUint("parallel"))
-			fmt.Printf("test: %s\n", testCmdArgs.GetString("table"))
+			schema, table, tableParseErr := parseSchemaTable(testExecutionArgs.GetString("table"))
+			if tableParseErr != nil {
+				fmt.Printf("An error occurred while parsing the schema + table: %v", tableParseErr)
+			}
+
+			iLevel, isolationParseErr := strconv.Atoi(testExecutionArgs.GetString("isolationLevel"))
+
+			if isolationParseErr == nil {
+
+				params := db2.NewDB2ConnparamsFromEnv()
+				db2Client := db2.NewClient(params)
+
+				err := ruperformance.ExecuteTest(
+					context.Background(),
+					dbclient.DB2,
+					&db2Client,
+					schema,
+					table,
+					int(testExecutionArgs.GetUint("warmupTime")),
+					int(testExecutionArgs.GetUint("executionTime")),
+					db2.GetIsolationLevel(iLevel))
+				if err != nil {
+					fmt.Printf("An error occurred while trying to execute the RU performance test: %v", err)
+				}
+			} else {
+				fmt.Printf("An error occurred while parsing the isolation level: %v", isolationParseErr)
+			}
 		},
 	}
 
-	testCmdArgs = allArgs.commandArgs(testExecutionCommand, append(globalArgs, "parallel", "table"))
+	testExecutionArgs = allArgs.commandArgs(
+		testExecutionCommand,
+		append(globalArgs, "table", "warmupTime", "executionTime", "isolationLevel"))
 
 	return testExecutionCommand
 }
