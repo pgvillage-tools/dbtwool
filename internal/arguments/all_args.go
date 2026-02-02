@@ -22,5 +22,7 @@ var (
 		"executionTime": {short: "x", defValue: uint(1), argType: typeUInt, desc: `The test execution time in seconds`},
 		"readMode": {short: "m", defValue: "scattered", argType: typeString,
 			desc: `How the reading of LOBs is distributed. 'scattered' or 'sequential'. leave empty for scattered.`},
+		"numOfRows": {short: "n", defValue: uint(1000000), argType: typeUInt,
+			desc: `How many rows to generate`},
 	}
 )

@@ -1,9 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
+	db2 "github.com/pgvillage-tools/dbtwool/pkg/db2client"
+	"github.com/pgvillage-tools/dbtwool/pkg/dbclient"
+	"github.com/pgvillage-tools/dbtwool/pkg/ruperformance"
 	"github.com/spf13/cobra"
 )
 
@@ -27,38 +31,58 @@ func ruCommand() *cobra.Command {
 
 	return ruPerformanceCommand
 }
-func ruGenCommand() *cobra.Command {
-	var genCmdArgs args
-	genCommand := &cobra.Command{
-		Use:   "gen",
-		Short: "generate all the things",
-		Long:  "Use this command to generate data to test with.",
-		Run: func(_ *cobra.Command, _ []string) {
-			for _, element := range genCmdArgs.GetStringSlice("spread") {
-				fmt.Println("gen:" + element)
-			}
-			fmt.Println("gen:" + genCmdArgs.GetString("byteSize"))
-		},
-	}
-
-	genCmdArgs = allArgs.commandArgs(genCommand, append(globalArgs, "spread", "byteSize", "table"))
-	return genCommand
-}
 
 func ruStageCommand() *cobra.Command {
-	var stageCmdArgs args
+	var stageArgs args
 	stageCommand := &cobra.Command{
 		Use:   "stage",
 		Short: "create tables",
 		Long:  "Create the necessary schema and table(s)",
 		Run: func(_ *cobra.Command, _ []string) {
-			fmt.Println("stage:" + stageCmdArgs.GetString("table"))
+			schema, table, err := parseSchemaTable(stageArgs.GetString("table"))
+
+			if err == nil {
+				params := db2.NewDB2ConnparamsFromEnv()
+				db2Client := db2.NewClient(params)
+				ruperformance.Stage(context.Background(), dbclient.DB2, &db2Client, schema, table)
+			} else {
+				fmt.Printf("An error occurred while parsing the schema + table: %v", err)
+			}
 		},
 	}
 
-	stageCmdArgs = allArgs.commandArgs(stageCommand, append(globalArgs, "table"))
+	stageArgs = allArgs.commandArgs(stageCommand, append(globalArgs, "table"))
 
 	return stageCommand
+}
+
+func ruGenCommand() *cobra.Command {
+	var genArgs args
+	genCommand := &cobra.Command{
+		Use:   "gen",
+		Short: "generate all the things",
+		Long:  "Use this command to generate data to test with.",
+		Run: func(_ *cobra.Command, _ []string) {
+			schema, table, err := parseSchemaTable(genArgs.GetString("table"))
+
+			if err == nil {
+				params := db2.NewDB2ConnparamsFromEnv()
+				db2Client := db2.NewClient(params)
+
+				ruperformance.Generate(
+					context.Background(),
+					dbclient.DB2,
+					&db2Client,
+					schema,
+					table,
+					int64(genArgs.GetUint("numOfRows")))
+			} else {
+				fmt.Printf("An error occurred while parsing the schema + table: %v", err)
+			}
+		},
+	}
+	genArgs = allArgs.commandArgs(genCommand, append(globalArgs, "table", "numOfRows"))
+	return genCommand
 }
 
 func ruTestCommand() *cobra.Command {
