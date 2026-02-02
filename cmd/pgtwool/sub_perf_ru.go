@@ -58,20 +58,35 @@ func ruStageCommand() *cobra.Command {
 	return stageCommand
 }
 func ruGenCommand() *cobra.Command {
-	var genCmdArgs arguments.Args
+	var genArgs arguments.Args
 	genCommand := &cobra.Command{
 		Use:   "gen",
 		Short: "generate all the things",
 		Long:  "Use this command to generate data to test with.",
 		Run: func(_ *cobra.Command, _ []string) {
-			for _, element := range genCmdArgs.GetStringSlice("spread") {
-				fmt.Println("gen:" + element)
+			// not used yet
+			schema, table, err := parseSchemaTable(genArgs.GetString("table"))
+
+			if err == nil {
+				params := pg.ConnParamsFromEnv()
+				postgresClient := pg.NewClient(params)
+
+				ruperformance.Generate(
+					context.Background(),
+					dbclient.Postgres,
+					&postgresClient,
+					schema,
+					table,
+					int64(genArgs.GetUint("numOfRows")))
+			} else {
+				fmt.Printf("An error occurred while parsing the schema + table: %v", err)
 			}
-			fmt.Println("gen:" + genCmdArgs.GetString("byteSize"))
 		},
 	}
 
-	genCmdArgs = arguments.AllArgs.CommandArgs(genCommand, append(globalArgs, "spread", "byteSize", "table"))
+	genArgs = arguments.AllArgs.CommandArgs(genCommand,
+		// revive:disable-next-line
+		append(globalArgs, "table", "numOfRows"))
 	return genCommand
 }
 
