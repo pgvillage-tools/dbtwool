@@ -111,7 +111,7 @@ var _ = Describe("Smoke", Ordered, func() {
 						db2Env,
 						jobType,
 						phase,
-						"--table", table, //otherwise multiple tests use the same table.
+						"--table", table, // otherwise multiple tests use the same table.
 					)
 					Ω(initErr).NotTo(HaveOccurred())
 					allContainers = append(allContainers, dbtwoolCnt)
