@@ -33,7 +33,7 @@ CREATE TABLE %v.%v (
 	return sql
 }
 
-// CreateTableSQL returns a CREATE TABLE query for PG
+// CreateTableSQL returns a CREATE Index query for PG
 func (helper PGHelper) CreateIndexSQL() string {
 	sql := fmt.Sprintf(`
 CREATE INDEX index_account_transaction_acct_%v
