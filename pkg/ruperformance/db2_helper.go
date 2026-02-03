@@ -21,7 +21,7 @@ CREATE SCHEMA %v;
 	return sql
 }
 
-// CreateIndexSQL returns a CREATE INDEX query for DB2
+// CreateTableSQL returns a CREATE TABLE query for DB2
 func (helper DB2Helper) CreateTableSQL() string {
 	sql := fmt.Sprintf(`
 CREATE TABLE %s.%s (
@@ -35,7 +35,7 @@ ORGANIZE BY ROW;`, helper.schemaName, helper.tableName)
 	return sql
 }
 
-// CreateTableSQL returns a CREATE TABLE query for DB2
+// CreateIndexSQL returns a CREATE INDEX query for DB2
 func (helper DB2Helper) CreateIndexSQL() string {
 	sql := fmt.Sprintf(`
 CREATE INDEX index_account_transaction_acct
