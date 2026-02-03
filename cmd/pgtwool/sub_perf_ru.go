@@ -40,7 +40,7 @@ func ruStageCommand() *cobra.Command {
 		Short: "create tables",
 		Long:  "Create the necessary schema and table(s)",
 		Run: func(_ *cobra.Command, _ []string) {
-			schema, table, err := parseSchemaTable(stageArgs.GetString("table"))
+			schema, table, err := parseSchemaTable(stageArgs.GetString(arguments.ArgTable))
 
 			if err == nil {
 				params := pg.ConnParamsFromEnv()
@@ -53,25 +53,39 @@ func ruStageCommand() *cobra.Command {
 		},
 	}
 
-	stageArgs = arguments.AllArgs.CommandArgs(stageCommand, append(globalArgs, "table"))
+	stageArgs = arguments.AllArgs.CommandArgs(stageCommand, append(globalArgs, arguments.ArgTable))
 
 	return stageCommand
 }
+
 func ruGenCommand() *cobra.Command {
-	var genCmdArgs arguments.Args
+	var genArgs arguments.Args
 	genCommand := &cobra.Command{
 		Use:   "gen",
 		Short: "generate all the things",
 		Long:  "Use this command to generate data to test with.",
 		Run: func(_ *cobra.Command, _ []string) {
-			for _, element := range genCmdArgs.GetStringSlice("spread") {
-				fmt.Println("gen:" + element)
+			schema, table, err := parseSchemaTable(genArgs.GetString(arguments.ArgTable))
+			if err == nil {
+				params := pg.ConnParamsFromEnv()
+				postgresClient := pg.NewClient(params)
+
+				ruperformance.Generate(
+					context.Background(),
+					dbclient.Postgres,
+					&postgresClient,
+					schema,
+					table,
+					int64(genArgs.GetUint(arguments.ArgNumOfRows)))
+			} else {
+				fmt.Printf("An error occurred while parsing the schema + table: %v", err)
 			}
-			fmt.Println("gen:" + genCmdArgs.GetString("byteSize"))
 		},
 	}
 
-	genCmdArgs = arguments.AllArgs.CommandArgs(genCommand, append(globalArgs, "spread", "byteSize", "table"))
+	genArgs = arguments.AllArgs.CommandArgs(genCommand,
+		// revive:disable-next-line
+		append(globalArgs, arguments.ArgTable, arguments.ArgNumOfRows))
 	return genCommand
 }
 
@@ -82,12 +96,16 @@ func ruTestCommand() *cobra.Command {
 		Short: "run the test",
 		Long:  "Use this command to run the test on the earlier created data.",
 		Run: func(_ *cobra.Command, _ []string) {
-			fmt.Printf("test: %d\n", testCmdArgs.GetUint("parallel"))
-			fmt.Printf("test: %s\n", testCmdArgs.GetString("table"))
+			fmt.Printf("test: %d\n", testCmdArgs.GetUint(arguments.ArgParallel))
+			fmt.Printf("test: %s\n", testCmdArgs.GetString(arguments.ArgTable))
 		},
 	}
 
-	testCmdArgs = arguments.AllArgs.CommandArgs(testExecutionCommand, append(globalArgs, "parallel", "table"))
+	testCmdArgs = arguments.AllArgs.CommandArgs(
+		testExecutionCommand,
+		append(globalArgs,
+			arguments.ArgParallel,
+			arguments.ArgTable))
 
 	return testExecutionCommand
 }

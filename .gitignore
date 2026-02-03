@@ -37,3 +37,4 @@ database
 scripts/set_windows_envs.ps1
 
 dbtwool
+pgtwool

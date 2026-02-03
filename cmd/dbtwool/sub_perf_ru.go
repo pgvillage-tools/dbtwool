@@ -31,23 +31,6 @@ func ruCommand() *cobra.Command {
 
 	return ruPerformanceCommand
 }
-func ruGenCommand() *cobra.Command {
-	var genCmdArgs args
-	genCommand := &cobra.Command{
-		Use:   "gen",
-		Short: "generate all the things",
-		Long:  "Use this command to generate data to test with.",
-		Run: func(_ *cobra.Command, _ []string) {
-			for _, element := range genCmdArgs.GetStringSlice("spread") {
-				fmt.Println("gen:" + element)
-			}
-			fmt.Println("gen:" + genCmdArgs.GetString("byteSize"))
-		},
-	}
-
-	genCmdArgs = allArgs.commandArgs(genCommand, append(globalArgs, "spread", "byteSize", "table"))
-	return genCommand
-}
 
 func ruStageCommand() *cobra.Command {
 	var stageArgs args
@@ -56,7 +39,7 @@ func ruStageCommand() *cobra.Command {
 		Short: "create tables",
 		Long:  "Create the necessary schema and table(s)",
 		Run: func(_ *cobra.Command, _ []string) {
-			schema, table, err := parseSchemaTable(stageArgs.GetString("table"))
+			schema, table, err := parseSchemaTable(stageArgs.GetString(ArgTable))
 
 			if err == nil {
 				params := db2.NewDB2ConnparamsFromEnv()
@@ -68,9 +51,38 @@ func ruStageCommand() *cobra.Command {
 		},
 	}
 
-	stageArgs = allArgs.commandArgs(stageCommand, append(globalArgs, "table"))
+	stageArgs = allArgs.commandArgs(stageCommand, append(globalArgs, ArgTable))
 
 	return stageCommand
+}
+
+func ruGenCommand() *cobra.Command {
+	var genArgs args
+	genCommand := &cobra.Command{
+		Use:   "gen",
+		Short: "generate all the things",
+		Long:  "Use this command to generate data to test with.",
+		Run: func(_ *cobra.Command, _ []string) {
+			schema, table, err := parseSchemaTable(genArgs.GetString(ArgTable))
+
+			if err == nil {
+				params := db2.NewDB2ConnparamsFromEnv()
+				db2Client := db2.NewClient(params)
+
+				ruperformance.Generate(
+					context.Background(),
+					dbclient.DB2,
+					&db2Client,
+					schema,
+					table,
+					int64(genArgs.GetUint(ArgNumOfRows)))
+			} else {
+				fmt.Printf("An error occurred while parsing the schema + table: %v", err)
+			}
+		},
+	}
+	genArgs = allArgs.commandArgs(genCommand, append(globalArgs, ArgTable, ArgNumOfRows))
+	return genCommand
 }
 
 func ruTestCommand() *cobra.Command {
@@ -80,12 +92,12 @@ func ruTestCommand() *cobra.Command {
 		Short: "run the test",
 		Long:  "Use this command to run the test on the earlier created data.",
 		Run: func(_ *cobra.Command, _ []string) {
-			fmt.Printf("test: %d\n", testCmdArgs.GetUint("parallel"))
-			fmt.Printf("test: %s\n", testCmdArgs.GetString("table"))
+			fmt.Printf("test: %d\n", testCmdArgs.GetUint(ArgParallel))
+			fmt.Printf("test: %s\n", testCmdArgs.GetString(ArgTable))
 		},
 	}
 
-	testCmdArgs = allArgs.commandArgs(testExecutionCommand, append(globalArgs, "parallel", "table"))
+	testCmdArgs = allArgs.commandArgs(testExecutionCommand, append(globalArgs, ArgParallel, ArgTable))
 
 	return testExecutionCommand
 }

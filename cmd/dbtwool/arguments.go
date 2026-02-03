@@ -24,6 +24,23 @@ const (
 	typeUnknown
 )
 
+// CLI argument keys used throughout dbtwool
+const (
+	ArgCfgFile        = "cfgFile"
+	ArgIsolationLevel = "isolationLevel"
+	ArgSpread         = "spread"
+	ArgByteSize       = "byteSize"
+	ArgLobType        = "lobType"
+	ArgEmptyLobs      = "emptyLobs"
+	ArgRandomizerSeed = "randomizerSeed"
+	ArgTable          = "table"
+	ArgParallel       = "parallel"
+	ArgWarmupTime     = "warmupTime"
+	ArgExecutionTime  = "executionTime"
+	ArgReadMode       = "readMode"
+	ArgNumOfRows      = "numOfRows"
+)
+
 var (
 	matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
 	matchAllCap   = regexp.MustCompile("([a-z0-9])([A-Z])")
@@ -80,30 +97,32 @@ type args map[string]arg
 
 var (
 	allArgs = args{
-		"cfgFile": {short: "c", defValue: "config.yaml", argType: typePath,
+		ArgCfgFile: {short: "c", defValue: "config.yaml", argType: typePath,
 			desc: `config file`},
-		"isolationLevel": {short: "i", defValue: "1", argType: typeString,
+		ArgIsolationLevel: {short: "i", defValue: "1", argType: typeString,
 			desc: `Transaction isolation level`},
-		"spread": {short: "s", defValue: []string{"100%:8b"}, argType: typeStringArray,
+		ArgSpread: {short: "s", defValue: []string{"100%:8b"}, argType: typeStringArray,
 			desc: `spread. By default everything is 8 bytes`},
-		"byteSize": {short: "b", defValue: "1kb", argType: typeString,
+		ArgByteSize: {short: "b", defValue: "1kb", argType: typeString,
 			desc: `What the size of the datasource should be in b, kb, gb, etc.`},
-		"lobType": {short: "l", defValue: "blob", argType: typeString,
+		ArgLobType: {short: "l", defValue: "blob", argType: typeString,
 			desc: `What type of large object. (BLOB, CLOB, JSONB, etc.)`},
-		"emptyLobs": {short: "e", defValue: uint(0), argType: typeUInt,
+		ArgEmptyLobs: {short: "e", defValue: uint(0), argType: typeUInt,
 			desc: `How many rows of empty lobs to generate`},
-		"randomizerSeed": {short: "r", argType: typeString,
+		ArgRandomizerSeed: {short: "r", argType: typeString,
 			desc: `seed to use for reproducability of the tests. Leave empty for random seed.`},
-		"table": {short: "t", defValue: "dbtwooltests.lobtable", argType: typeString,
+		ArgTable: {short: "t", defValue: "dbtwooltests.lobtable", argType: typeString,
 			desc: `What the schema + table name should be`},
-		"parallel": {short: "p", defValue: uint(1), argType: typeUInt,
+		ArgParallel: {short: "p", defValue: uint(1), argType: typeUInt,
 			desc: `The degree of parallel execution`},
-		"warmupTime": {short: "w", defValue: uint(1), argType: typeUInt,
+		ArgWarmupTime: {short: "w", defValue: uint(1), argType: typeUInt,
 			desc: `The test warmup time in seconds`},
-		"executionTime": {short: "x", defValue: uint(1), argType: typeUInt,
+		ArgExecutionTime: {short: "x", defValue: uint(1), argType: typeUInt,
 			desc: `The test execution time in seconds`},
-		"readMode": {short: "m", defValue: "scattered", argType: typeString,
+		ArgReadMode: {short: "m", defValue: "scattered", argType: typeString,
 			desc: `How the reading of LOBs is distributed. 'scattered' or 'sequential'. leave empty for scattered.`},
+		ArgNumOfRows: {short: "n", defValue: uint(10000000), argType: typeUInt,
+			desc: `How many rows to generate`},
 	}
 )
 

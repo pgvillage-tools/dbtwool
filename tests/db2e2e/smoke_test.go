@@ -36,8 +36,7 @@ var _ = Describe("Smoke", Ordered, func() {
 			"DB2_PROTOCOL": "TCPIP",
 		}
 	)
-	BeforeAll(func() {
-		// RYUK requires permissions we don't need and don't want to implement
+	BeforeAll(func() { // RYUK requires permissions we don't need and don't want to implement
 		os.Setenv("TESTCONTAINERS_RYUK_DISABLED", "true")
 
 		ctx = context.Background()
@@ -102,19 +101,32 @@ var _ = Describe("Smoke", Ordered, func() {
 				"ru-performance":  "ruperformancetest",
 				"lob-performance": "lobperformancetest",
 			}
+
 			for _, jobType := range []string{"ru-performance", "lob-performance"} {
 				for _, phase := range []string{"stage", "gen", "test"} {
 					table := tables[jobType]
+
+					args := []string{
+						"--table", table, // otherwise multiple tests use the same table.
+					}
+
+					// Override default 10000000 rows generation for ru-performance test
+					if jobType == "ru-performance" && phase == "gen" {
+						args = append(args, "--numOfRows", "10000")
+					}
+
+					cmdArgs := append([]string{jobType, phase}, args...)
+
 					dbtwoolCnt, initErr := runDbwTool(
 						ctx,
 						nw,
 						db2Env,
-						jobType,
-						phase,
-						"--table", table, // otherwise multiple tests use the same table.
+						cmdArgs...,
 					)
+
 					Ω(initErr).NotTo(HaveOccurred())
 					allContainers = append(allContainers, dbtwoolCnt)
+
 					dbtwoolLogs, logErr := containerLogs(ctx, dbtwoolCnt)
 					Ω(logErr).NotTo(HaveOccurred())
 					Ω(dbtwoolLogs).To(MatchRegexp(".*info.*finished.*"))
