@@ -2,6 +2,7 @@ package ruperformance
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pgvillage-tools/dbtwool/pkg/dbclient"
 	"github.com/pgvillage-tools/dbtwool/pkg/dbinterface"
@@ -10,7 +11,7 @@ import (
 
 // Stage is the main handler for the staging phase of the LOB tests
 func Stage(ctx context.Context, dbType dbclient.RDBMS, client dbinterface.Client,
-	schemaName string, tableName string) {
+	schemaName string, tableName string) (errorResult error) {
 	var logger = log.With().Logger()
 
 	logger.Info().Msg("Initiating connection pool.")
@@ -20,17 +21,16 @@ func Stage(ctx context.Context, dbType dbclient.RDBMS, client dbinterface.Client
 	}
 
 	logger.Info().Msg("Connecting to database.")
-	conn, connectErr1 := pool.Connect(ctx) //
-	if connectErr1 != nil {
-		logger.Fatal().Msgf("connect error for connection 1: %v", connectErr1)
+	conn, connectErr := pool.Connect(ctx)
+	if connectErr != nil {
+		return fmt.Errorf("connect error: %w", connectErr)
 	}
 	defer conn.Close(ctx)
 
 	logger.Info().Msg("Starting transaction")
-	if err := conn.Begin(ctx); err != nil {
-		logger.Fatal().Msgf("error during begin transaction on connection: %v", err)
+	if beginErr := conn.Begin(ctx); beginErr != nil {
+		return fmt.Errorf("error during begin transaction: %w", beginErr)
 	}
-
 	var dbHelper DBHelper
 
 	if dbType == dbclient.DB2 {
@@ -48,20 +48,25 @@ func Stage(ctx context.Context, dbType dbclient.RDBMS, client dbinterface.Client
 	}
 
 	logger.Info().Msg("Executing create table")
-	if rowsAltered, err := conn.Execute(ctx, dbHelper.CreateTableSQL()); err != nil {
-		logger.Fatal().Msgf("Error while creating the table: %v", err)
+	if rowsAltered, execErr := conn.Execute(ctx, dbHelper.CreateTableSQL()); execErr != nil {
+		return fmt.Errorf("error during create table: %w", execErr) // revive:disable-next-line
 	} else {
 		logger.Info().Msgf("Rows altered: %v", rowsAltered)
 	}
 
 	logger.Info().Msg("Executing create index")
-	if rowsAltered, err := conn.Execute(ctx, dbHelper.CreateIndexSQL()); err != nil {
-		logger.Fatal().Msgf("Error while creating the index: %v", err)
+
+	if rowsAltered, execErr := conn.Execute(ctx, dbHelper.CreateIndexSQL()); execErr != nil {
+		return fmt.Errorf("error while creating the index: %w", execErr) // revive:disable-next-line
 	} else {
 		logger.Info().Msgf("Rows altered: %v", rowsAltered)
 	}
 
-	conn.Commit(ctx)
+	if commitErr := conn.Commit(ctx); commitErr != nil {
+		return fmt.Errorf("error while committing transaction: %w", commitErr)
+	}
 
 	logger.Info().Msg("Closing connection")
+
+	return nil
 }

@@ -124,7 +124,7 @@ func ruTestCommand() *cobra.Command {
 
 	testExecutionArgs = allArgs.commandArgs(
 		testExecutionCommand,
-		append(globalArgs, "table", ArgWarmupTime, ArgExecutionTime, ArgIsolationLevel))
+		append(globalArgs, ArgTable, ArgWarmupTime, ArgExecutionTime, ArgIsolationLevel))
 
 	return testExecutionCommand
 }
