@@ -23,7 +23,7 @@ type AcctTxnRowPlan struct {
 	Description string  // always 100 long
 }
 
-// Generate actually generates data and writes it to the database based on db, and data generation arguments.>>>>>>> feat/ru-performance-gen
+// Generate actually generates data and writes it to the database based on db, and data generation arguments.
 func Generate(
 	ctx context.Context,
 	dbType dbclient.RDBMS,

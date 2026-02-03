@@ -130,7 +130,11 @@ func ruTestCommand() *cobra.Command {
 
 	testExecutionArgs = arguments.AllArgs.CommandArgs(
 		testExecutionCommand,
-		append(globalArgs, arguments.ArgTable, arguments.ArgWarmupTime, arguments.ArgExecutionTime, arguments.ArgIsolationLevel))
+		append(globalArgs,
+			arguments.ArgTable,
+			arguments.ArgWarmupTime,
+			arguments.ArgExecutionTime,
+			arguments.ArgIsolationLevel))
 
 	return testExecutionCommand
 }

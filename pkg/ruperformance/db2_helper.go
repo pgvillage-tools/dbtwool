@@ -44,6 +44,7 @@ CREATE INDEX index_account_transaction_acct_%v
 	return sql
 }
 
+// CreateOlapSQL returns a select query which scanning for DB2
 func (helper DB2Helper) CreateOlapSQL() string {
 	return fmt.Sprintf(`
 SELECT COUNT(*) AS cnt, SUM(amount) AS total_amt
@@ -53,6 +54,7 @@ WHERE  acct_id = 50
 `, helper.schemaName, helper.tableName)
 }
 
+// CreateOltpSQL returns an update query for DB2
 func (helper DB2Helper) CreateOltpSQL(id int64) string {
 	return fmt.Sprintf(`
 UPDATE %s.%s

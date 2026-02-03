@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
-	"sync/atomic"
 	"time"
 
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/pgvillage-tools/dbtwool/pkg/dbclient"
 	"github.com/pgvillage-tools/dbtwool/pkg/dbinterface"
@@ -24,178 +24,178 @@ func ExecuteTest(
 	tableName string,
 	warmupTimeSec int,
 	executionTimeSec int,
-	readIsolation dbinterface.IsolationLevel, // e.g. UR or CS for DB2
+	readIsolation dbinterface.IsolationLevel,
 ) error {
-	logger := log.With().
-		Str("schema", schemaName).
-		Str("table", tableName).
-		Int("warmup_s", warmupTimeSec).
-		Int("execution_s", executionTimeSec).
-		Logger()
+	if err := validateTimes(warmupTimeSec, executionTimeSec); err != nil {
+		return err
+	}
 
-	if warmupTimeSec <= 0 {
-		return errors.New("warmupTimeSec must be > 0")
-	}
-	if executionTimeSec <= 0 {
-		return errors.New("executionTimeSec must be > 0")
-	}
+	logger := testLogger(schemaName, tableName, warmupTimeSec, executionTimeSec)
 
 	pool, err := client.Pool(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to init pool: %w", err)
 	}
 
-	var dbHelper DBHelper
+	dbHelper := getDBHelper(dbType, tableName, schemaName)
+	olapSQL := dbHelper.CreateOlapSQL()
 
-	if dbType == dbclient.DB2 {
-		dbHelper = DB2Helper{schemaName: schemaName, tableName: tableName}
-	} else {
-		dbHelper = PGHelper{schemaName: schemaName, tableName: tableName}
-	}
-
-	olapSql := dbHelper.CreateOlapSQL()
-
-	// Total test context: warmup + measurement
-	totalDur := time.Duration(warmupTimeSec+executionTimeSec) * time.Second
-	totalCtx, cancelTotal := context.WithTimeout(ctx, totalDur)
+	totalCtx, cancelTotal := context.WithTimeout(
+		ctx,
+		time.Duration(warmupTimeSec+executionTimeSec)*time.Second,
+	)
 	defer cancelTotal()
 
-	// Measurement starts after warmup
-	warmupCtx, cancelWarmup := context.WithTimeout(ctx, time.Duration(warmupTimeSec)*time.Second)
+	warmupCtx, cancelWarmup := context.WithTimeout(
+		totalCtx,
+		time.Duration(warmupTimeSec)*time.Second,
+	)
 	defer cancelWarmup()
 
-	// Two separate connections: one for OLTP, one for OLAP.
-	oltpConn, err := pool.Connect(totalCtx)
+	oltpConn, closeOLTP, err := connectConn(totalCtx, pool)
 	if err != nil {
 		return fmt.Errorf("failed to connect for oltp: %w", err)
 	}
-	defer oltpConn.Close(totalCtx)
+	defer closeOLTP()
 
-	olapConn, err := pool.Connect(totalCtx)
+	olapConn, closeOLAP, err := connectConn(totalCtx, pool)
 	if err != nil {
 		return fmt.Errorf("failed to connect for olap: %w", err)
 	}
-	defer olapConn.Close(totalCtx)
+	defer closeOLAP()
 
-	// Set read isolation level on OLAP connection.
 	if err := olapConn.SetIsolationLevel(totalCtx, readIsolation); err != nil {
 		return fmt.Errorf("failed to set isolation on olap conn: %w", err)
 	}
 
-	var measuring atomic.Int32
-	var olapCompleted atomic.Int64
-	var oltpOps atomic.Int64
+	var metrics testMetrics
 
-	var startTime time.Time
-	var startOnce sync.Once
+	g, gctx := errgroup.WithContext(totalCtx)
+	g.Go(func() error { return runOLTPWorkerErr(gctx, dbHelper, oltpConn, &metrics) })
+	g.Go(func() error { return runOLAPWorkerErr(gctx, olapConn, olapSQL, &metrics) })
 
-	errCh := make(chan error, 2)
-
-	// OLTP worker: continuously update & commit.
-	go func() {
-		var step int64
-		for {
-			if totalCtx.Err() != nil {
-				errCh <- nil
-				return
-			}
-
-			// each statement in its own transaction (keeps log growth controlled and produces churn)
-			if err := oltpConn.Begin(totalCtx); err != nil {
-				if totalCtx.Err() != nil {
-					errCh <- nil
-					return
-				}
-				errCh <- fmt.Errorf("oltp begin failed: %w", err)
-				return
-			}
-
-			sql := dbHelper.CreateOltpSQL(step)
-			step++
-
-			if _, err := oltpConn.Execute(totalCtx, sql); err != nil {
-				_ = oltpConn.Rollback(totalCtx)
-				if totalCtx.Err() != nil {
-					errCh <- nil
-					return
-				}
-				errCh <- fmt.Errorf("oltp execute failed: %w", err)
-				return
-			}
-
-			if err := oltpConn.Commit(totalCtx); err != nil {
-				if totalCtx.Err() != nil {
-					errCh <- nil
-					return
-				}
-				errCh <- fmt.Errorf("oltp commit failed: %w", err)
-				return
-			}
-
-			oltpOps.Add(1)
-		}
-	}()
-
-	// OLAP worker: repeatedly run aggregation query; count completions only during measurement.
-	go func() {
-		for {
-			if totalCtx.Err() != nil {
-				errCh <- nil
-				return
-			}
-
-			_, err := olapConn.QueryOneRow(totalCtx, olapSql)
-			if err != nil {
-				if totalCtx.Err() != nil {
-					errCh <- nil
-					return
-				}
-				errCh <- fmt.Errorf("olap query failed: %w", err)
-				return
-			}
-
-			if measuring.Load() == 1 {
-				olapCompleted.Add(1)
-				startOnce.Do(func() { startTime = time.Now() })
-			}
-		}
-	}()
-
-	// Wait warmup, then begin measurement.
 	<-warmupCtx.Done()
-	measuring.Store(1)
+	metrics.measuring.Store(1)
 
-	// Wait until total duration ends.
 	<-totalCtx.Done()
 
-	// Collect worker results.
-	var firstErr error
-	for i := 0; i < 2; i++ {
-		if wErr := <-errCh; wErr != nil && firstErr == nil {
-			firstErr = wErr
-		}
-	}
-	if firstErr != nil {
-		return firstErr
+	if err := g.Wait(); err != nil {
+		return err
 	}
 
-	// Reporting
-	if startTime.IsZero() {
-		startTime = time.Now().Add(-time.Duration(executionTimeSec) * time.Second)
+	logResults(logger, &metrics, executionTimeSec)
+	return nil
+}
+
+func runOLTPWorkerErr(ctx context.Context, dbHelper DBHelper, conn dbinterface.Connection, m *testMetrics) error {
+	var step int64
+	for {
+		if ctx.Err() != nil {
+			return nil
+		}
+
+		if err := conn.Begin(ctx); err != nil {
+			if ctx.Err() != nil {
+				return nil
+			}
+			return fmt.Errorf("oltp begin failed: %w", err)
+		}
+
+		sql := dbHelper.CreateOltpSQL(step)
+		step++
+
+		if _, err := conn.Execute(ctx, sql); err != nil {
+			_ = conn.Rollback(ctx)
+			if ctx.Err() != nil {
+				return nil
+			}
+			return fmt.Errorf("oltp execute failed: %w", err)
+		}
+
+		if err := conn.Commit(ctx); err != nil {
+			if ctx.Err() != nil {
+				return nil
+			}
+			return fmt.Errorf("oltp commit failed: %w", err)
+		}
+
+		m.oltpOps.Add(1)
 	}
-	elapsed := time.Since(startTime)
+}
+
+func runOLAPWorkerErr(ctx context.Context, conn dbinterface.Connection, olapSQL string, m *testMetrics) error {
+	for {
+		if ctx.Err() != nil {
+			return nil
+		}
+
+		if _, err := conn.QueryOneRow(ctx, olapSQL); err != nil {
+			if ctx.Err() != nil {
+				return nil
+			}
+			return fmt.Errorf("olap query failed: %w", err)
+		}
+
+		if m.measuring.Load() == 1 {
+			m.olapCompleted.Add(1)
+			m.markStart()
+		}
+	}
+}
+
+// getDBHelper makes ExecuteTest just a bit shorter
+func getDBHelper(rdbms dbclient.RDBMS, schemaName, tableName string) DBHelper {
+	if rdbms == dbclient.DB2 {
+		return DB2Helper{schemaName: schemaName, tableName: tableName}
+	}
+	return PGHelper{schemaName: schemaName, tableName: tableName}
+}
+
+func connectConn(ctx context.Context, pool dbinterface.Pool) (dbinterface.Connection, func(), error) {
+	conn, err := pool.Connect(ctx)
+	if err != nil {
+		return nil, func() {}, err
+	}
+	cleanup := func() { conn.Close(ctx) }
+	return conn, cleanup, nil
+}
+
+func validateTimes(warmupTimeSec, executionTimeSec int) error {
+	if warmupTimeSec <= 0 {
+		return errors.New("warmupTimeSec must be > 0")
+	}
+	if executionTimeSec <= 0 {
+		return errors.New("executionTimeSec must be > 0")
+	}
+	return nil
+}
+
+func testLogger(schemaName, tableName string, warmupTimeSec, executionTimeSec int) zerolog.Logger {
+	return log.With().
+		Str("schema", schemaName).
+		Str("table", tableName).
+		Int("warmup_s", warmupTimeSec).
+		Int("execution_s", executionTimeSec).
+		Logger()
+}
+
+func logResults(
+	logger zerolog.Logger,
+	metrics *testMetrics,
+	executionTimeSec int,
+) {
+	start := metrics.startTimeOrFallback(executionTimeSec)
+	elapsed := time.Since(start)
 	if elapsed <= 0 {
 		elapsed = time.Duration(executionTimeSec) * time.Second
 	}
 
-	olap := olapCompleted.Load()
-	oltp := oltpOps.Load()
+	olap := metrics.olapCompleted.Load()
+	oltp := metrics.oltpOps.Load()
 
 	logger.Info().
 		Int64("oltp_ops", oltp).
 		Int64("olap_completed", olap).
 		Float64("olap_per_sec", float64(olap)/elapsed.Seconds()).
 		Msg("Isolation read performance test finished")
-
-	return nil
 }

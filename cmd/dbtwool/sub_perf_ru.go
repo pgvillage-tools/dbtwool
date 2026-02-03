@@ -101,7 +101,6 @@ func ruTestCommand() *cobra.Command {
 			iLevel, isolationParseErr := strconv.Atoi(testExecutionArgs.GetString(ArgIsolationLevel))
 
 			if isolationParseErr == nil {
-
 				params := db2.NewDB2ConnparamsFromEnv()
 				db2Client := db2.NewClient(params)
 
