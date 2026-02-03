@@ -96,16 +96,23 @@ var _ = Describe("Smoke", Ordered, func() {
 			})
 		})
 	*/
-	Context("when running consistency check", func() {
+	Context("When running dbtwool commands", func() {
 		It("should work properly", func() {
-			// run dbtwool consistency check
+			tables := map[string]string{
+				"ru-performance":  "ruperformancetest",
+				"lob-performance": "lobperformancetest",
+			}
 			for _, jobType := range []string{"ru-performance", "lob-performance"} {
 				for _, phase := range []string{"stage", "gen", "test"} {
+					table := tables[jobType]
 					dbtwoolCnt, initErr := runDbwTool(
 						ctx,
 						nw,
 						db2Env,
-						jobType, phase)
+						jobType,
+						phase,
+						"--table", table, // otherwise multiple tests use the same table.
+					)
 					Ω(initErr).NotTo(HaveOccurred())
 					allContainers = append(allContainers, dbtwoolCnt)
 					dbtwoolLogs, logErr := containerLogs(ctx, dbtwoolCnt)
