@@ -65,9 +65,7 @@ func ruGenCommand() *cobra.Command {
 		Short: "generate all the things",
 		Long:  "Use this command to generate data to test with.",
 		Run: func(_ *cobra.Command, _ []string) {
-			// not used yet
 			schema, table, err := parseSchemaTable(genArgs.GetString(arguments.ArgTable))
-
 			if err == nil {
 				params := pg.ConnParamsFromEnv()
 				postgresClient := pg.NewClient(params)

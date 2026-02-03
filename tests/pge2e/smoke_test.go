@@ -42,8 +42,7 @@ var _ = Describe("Smoke", Ordered, func() {
 			"PGPASSWORD": pgPassword,
 		}
 	)
-	BeforeAll(func() {
-		// RYUK requires permissions we don't need and don't want to implement
+	BeforeAll(func() { // RYUK requires permissions we don't need and don't want to implement
 		os.Setenv("TESTCONTAINERS_RYUK_DISABLED", "true")
 
 		ctx = context.Background()
