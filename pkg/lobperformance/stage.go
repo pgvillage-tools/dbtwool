@@ -42,7 +42,7 @@ func Stage(ctx context.Context, dbType dbclient.RDBMS, client dbinterface.Client
 	logger.Info().Msg("Executing create schema")
 
 	if rowsAltered, err := conn.Execute(ctx, dbHelper.CreateSchemaSQL()); err != nil {
-		logger.Fatal().Msgf("Error while creating the schema: %v", err)
+		logger.Warn().Msgf("Error while trying to create the schema: %v", err)
 	} else {
 		logger.Info().Msgf("Rows altered: %v", rowsAltered)
 	}

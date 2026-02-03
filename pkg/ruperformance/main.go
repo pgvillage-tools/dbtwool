@@ -5,10 +5,3 @@ import (
 )
 
 var logger = log.With().Logger()
-
-const (
-	kilo      = 1024
-	kiloBytes = kilo
-	megaBytes = kiloBytes * kilo
-	gigaBytes = megaBytes * kilo
-)

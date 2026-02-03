@@ -57,6 +57,7 @@ func ruStageCommand() *cobra.Command {
 
 	return stageCommand
 }
+
 func ruGenCommand() *cobra.Command {
 	var genArgs arguments.Args
 	genCommand := &cobra.Command{

@@ -1,3 +1,4 @@
+// Package ruperformance handles all work regarding read uncommitted performance tests
 package ruperformance
 
 import (
