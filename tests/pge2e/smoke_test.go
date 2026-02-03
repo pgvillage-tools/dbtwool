@@ -83,13 +83,23 @@ var _ = Describe("Smoke", Ordered, func() {
 			for _, jobType := range []string{"ru-performance", "lob-performance"} {
 				for _, phase := range []string{"stage", "gen", "test"} {
 					table := tables[jobType]
+
+					args := []string{
+						"--table", table, // otherwise multiple tests use the same table.
+					}
+
+					// Override default 10000000 rows generation for ru-performance test
+					if jobType == "ru-performance" && phase == "gen" {
+						args = append(args, "--numOfRows", "10000")
+					}
+
+					cmdArgs := append([]string{jobType, phase}, args...)
+
 					dbtwoolCnt, initErr := runDbwTool(
 						ctx,
 						nw,
 						pgEnv,
-						jobType,
-						phase,
-						"--table", table, // otherwise multiple tests use the same table.
+						cmdArgs...,
 					)
 					Ω(initErr).NotTo(HaveOccurred())
 					allContainers = append(allContainers, dbtwoolCnt)
