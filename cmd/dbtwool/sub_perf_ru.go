@@ -1,9 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
+	db2 "github.com/pgvillage-tools/dbtwool/pkg/db2client"
+	"github.com/pgvillage-tools/dbtwool/pkg/dbclient"
+	"github.com/pgvillage-tools/dbtwool/pkg/ruperformance"
 	"github.com/spf13/cobra"
 )
 
@@ -46,17 +50,25 @@ func ruGenCommand() *cobra.Command {
 }
 
 func ruStageCommand() *cobra.Command {
-	var stageCmdArgs args
+	var stageArgs args
 	stageCommand := &cobra.Command{
 		Use:   "stage",
 		Short: "create tables",
 		Long:  "Create the necessary schema and table(s)",
 		Run: func(_ *cobra.Command, _ []string) {
-			fmt.Println("stage:" + stageCmdArgs.GetString("table"))
+			schema, table, err := parseSchemaTable(stageArgs.GetString("table"))
+
+			if err == nil {
+				params := db2.NewDB2ConnparamsFromEnv()
+				db2Client := db2.NewClient(params)
+				ruperformance.Stage(context.Background(), dbclient.DB2, &db2Client, schema, table)
+			} else {
+				fmt.Printf("An error occurred while parsing the schema + table: %v", err)
+			}
 		},
 	}
 
-	stageCmdArgs = allArgs.commandArgs(stageCommand, append(globalArgs, "table"))
+	stageArgs = allArgs.commandArgs(stageCommand, append(globalArgs, "table"))
 
 	return stageCommand
 }

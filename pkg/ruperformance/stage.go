@@ -1,4 +1,4 @@
-package lobperformance
+package ruperformance
 
 import (
 	"context"
@@ -50,6 +50,13 @@ func Stage(ctx context.Context, dbType dbclient.RDBMS, client dbinterface.Client
 	logger.Info().Msg("Executing create table")
 	if rowsAltered, err := conn.Execute(ctx, dbHelper.CreateTableSQL()); err != nil {
 		logger.Fatal().Msgf("Error while creating the table: %v", err)
+	} else {
+		logger.Info().Msgf("Rows altered: %v", rowsAltered)
+	}
+
+	logger.Info().Msg("Executing create index")
+	if rowsAltered, err := conn.Execute(ctx, dbHelper.CreateIndexSQL()); err != nil {
+		logger.Fatal().Msgf("Error while creating the index: %v", err)
 	} else {
 		logger.Info().Msgf("Rows altered: %v", rowsAltered)
 	}
