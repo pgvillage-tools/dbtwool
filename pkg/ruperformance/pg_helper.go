@@ -20,7 +20,7 @@ CREATE SCHEMA IF NOT EXISTS %v;
 	return sql
 }
 
-// CreateTableSQL returns a CREATE TABLE query for DB2
+// CreateTableSQL returns a CREATE TABLE query for PostgreSQL
 func (helper PGHelper) CreateTableSQL() string {
 	sql := fmt.Sprintf(`
 CREATE TABLE %v.%v (
@@ -33,7 +33,7 @@ CREATE TABLE %v.%v (
 	return sql
 }
 
-// CreateTableSQL returns a CREATE TABLE query for DB2
+// CreateIndexSQL returns a CREATE INDEX query for PostgreSQL
 func (helper PGHelper) CreateIndexSQL() string {
 	sql := fmt.Sprintf(`
 CREATE INDEX index_account_transaction_acct

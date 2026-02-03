@@ -1,4 +1,4 @@
-// Package lobperformance handles all work regarding LOB performance tests
+// Package ruperformance handles all work regarding read uncommitted performance tests
 package ruperformance
 
 import (
@@ -21,7 +21,7 @@ CREATE SCHEMA %v;
 	return sql
 }
 
-// CreateTableSQL returns a CREATE TABLE query for DB2
+// CreateIndexSQL returns a CREATE INDEX query for DB2
 func (helper DB2Helper) CreateTableSQL() string {
 	sql := fmt.Sprintf(`
 CREATE TABLE %s.%s (
