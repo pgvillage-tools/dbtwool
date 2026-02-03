@@ -38,7 +38,7 @@ func lobStageCommand() *cobra.Command {
 		Short: "create tables",
 		Long:  "Create the necessary schema and table(s)",
 		Run: func(_ *cobra.Command, _ []string) {
-			schema, table, err := parseSchemaTable(stageArgs.GetString("table"))
+			schema, table, err := parseSchemaTable(stageArgs.GetString(ArgTable))
 
 			if err == nil {
 				params := db2.NewDB2ConnparamsFromEnv()
@@ -50,7 +50,7 @@ func lobStageCommand() *cobra.Command {
 		},
 	}
 
-	stageArgs = allArgs.commandArgs(stageCommand, append(globalArgs, "table"))
+	stageArgs = allArgs.commandArgs(stageCommand, append(globalArgs, ArgTable))
 
 	return stageCommand
 }
@@ -62,7 +62,7 @@ func lobGenCommand() *cobra.Command {
 		Short: "generate all the things",
 		Long:  "Use this command to generate data to test with.",
 		Run: func(_ *cobra.Command, _ []string) {
-			schema, table, err := parseSchemaTable(genArgs.GetString("table"))
+			schema, table, err := parseSchemaTable(genArgs.GetString(ArgTable))
 
 			if err == nil {
 				params := db2.NewDB2ConnparamsFromEnv()
@@ -74,17 +74,23 @@ func lobGenCommand() *cobra.Command {
 					&db2Client,
 					schema,
 					table,
-					genArgs.GetStringSlice("spread"),
-					int64(genArgs.GetUint("emptyLobs")),
-					genArgs.GetString("byteSize"),
-					genArgs.GetString("lobType"))
+					genArgs.GetStringSlice(ArgSpread),
+					int64(genArgs.GetUint(ArgEmptyLobs)),
+					genArgs.GetString(ArgByteSize),
+					genArgs.GetString(ArgLobType))
 			} else {
 				fmt.Printf("An error occurred while parsing the schema + table: %v", err)
 			}
 		},
 	}
 
-	genArgs = allArgs.commandArgs(genCommand, append(globalArgs, "spread", "byteSize", "table", "emptyLobs", "lobType"))
+	genArgs = allArgs.commandArgs(genCommand, append(
+		globalArgs,
+		ArgSpread,
+		ArgByteSize,
+		ArgTable,
+		ArgEmptyLobs,
+		ArgLobType))
 	return genCommand
 }
 
@@ -95,7 +101,7 @@ func lobTestCommand() *cobra.Command {
 		Short: "run the test",
 		Long:  "Use this command to run the test on the earlier created data.",
 		Run: func(_ *cobra.Command, _ []string) {
-			schema, table, err := parseSchemaTable(testExecutionArgs.GetString("table"))
+			schema, table, err := parseSchemaTable(testExecutionArgs.GetString(ArgTable))
 
 			if err == nil {
 				params := db2.NewDB2ConnparamsFromEnv()
@@ -107,12 +113,12 @@ func lobTestCommand() *cobra.Command {
 					&db2Client,
 					schema,
 					table,
-					testExecutionArgs.GetString("randomizerSeed"),
-					int(testExecutionArgs.GetUint("parallel")),
-					int(testExecutionArgs.GetUint("warmupTime")),
-					int(testExecutionArgs.GetUint("executionTime")),
-					testExecutionArgs.GetString("readMode"),
-					testExecutionArgs.GetString("lobType"))
+					testExecutionArgs.GetString(ArgRandomizerSeed),
+					int(testExecutionArgs.GetUint(ArgParallel)),
+					int(testExecutionArgs.GetUint(ArgWarmupTime)),
+					int(testExecutionArgs.GetUint(ArgExecutionTime)),
+					testExecutionArgs.GetString(ArgReadMode),
+					testExecutionArgs.GetString(ArgLobType))
 
 				if err != nil {
 					fmt.Printf("An error occurred while trying to execute the LOB performance test: %v", err)
@@ -125,8 +131,14 @@ func lobTestCommand() *cobra.Command {
 
 	testExecutionArgs = allArgs.commandArgs(
 		testExecutionCommand,
-		// revive:disable-next-line
-		append(globalArgs, "table", "randomizerSeed", "parallel", "warmupTime", "executionTime", "readMode", "lobType"),
+		append(globalArgs,
+			ArgTable,
+			ArgRandomizerSeed,
+			ArgParallel,
+			ArgWarmupTime,
+			ArgExecutionTime,
+			ArgReadMode,
+			ArgLobType),
 	)
 
 	return testExecutionCommand

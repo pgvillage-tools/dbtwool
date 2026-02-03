@@ -20,7 +20,7 @@ CREATE SCHEMA IF NOT EXISTS %v;
 	return sql
 }
 
-// CreateTableSQL returns a CREATE TABLE query for PG
+// CreateTableSQL returns a CREATE TABLE query for PostgreSQL
 func (helper PGHelper) CreateTableSQL() string {
 	sql := fmt.Sprintf(`
 CREATE TABLE %v.%v (
@@ -33,17 +33,11 @@ CREATE TABLE %v.%v (
 	return sql
 }
 
-// CreateTableSQL returns a CREATE Index query for PG
+// CreateTableSQL returns a CREATE Index query for PostgreSQL
 func (helper PGHelper) CreateIndexSQL() string {
 	sql := fmt.Sprintf(`
 CREATE INDEX index_account_transaction_acct_%v
     ON %v.%v (acct_id, txn_ts);`, helper.tableName, helper.schemaName, helper.tableName)
-	logger.Debug().Msg(sql)
-	return sql
-}
-
-func (helper PGHelper) CreateInserSQLPrefix() string {
-	sql := fmt.Sprintf("INSERT INTO %s.%s (acct_id, txn_ts, amount, filler) VALUES ($1, $2, $3, $4)", helper.schemaName, helper.tableName)
 	logger.Debug().Msg(sql)
 	return sql
 }

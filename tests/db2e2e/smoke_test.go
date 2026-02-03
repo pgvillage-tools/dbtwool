@@ -96,18 +96,38 @@ var _ = Describe("Smoke", Ordered, func() {
 			})
 		})
 	*/
-	Context("when running consistency check", func() {
+	Context("When running dbtwool commands", func() {
 		It("should work properly", func() {
-			// run dbtwool consistency check
+			tables := map[string]string{
+				"ru-performance":  "ruperformancetest",
+				"lob-performance": "lobperformancetest",
+			}
+
 			for _, jobType := range []string{"ru-performance", "lob-performance"} {
 				for _, phase := range []string{"stage", "gen", "test"} {
+					table := tables[jobType]
+
+					args := []string{
+						"--table", table, // otherwise multiple tests use the same table.
+					}
+
+					// Override default 10000000 rows generation for ru-performance test
+					if jobType == "ru-performance" && phase == "gen" {
+						args = append(args, "--numOfRows", "10000")
+					}
+
+					cmdArgs := append([]string{jobType, phase}, args...)
+
 					dbtwoolCnt, initErr := runDbwTool(
 						ctx,
 						nw,
 						db2Env,
-						jobType, phase)
+						cmdArgs...,
+					)
+
 					Ω(initErr).NotTo(HaveOccurred())
 					allContainers = append(allContainers, dbtwoolCnt)
+
 					dbtwoolLogs, logErr := containerLogs(ctx, dbtwoolCnt)
 					Ω(logErr).NotTo(HaveOccurred())
 					Ω(dbtwoolLogs).To(MatchRegexp(".*info.*finished.*"))

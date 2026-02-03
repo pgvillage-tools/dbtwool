@@ -44,12 +44,6 @@ CREATE INDEX index_account_transaction_acct_%v
 	return sql
 }
 
-func (helper DB2Helper) CreateInserSQLPrefix() string {
-	sql := fmt.Sprintf("INSERT INTO %s.%s (acct_id, txn_ts, amount, filler) VALUES (?, ?, ?, ?)", helper.schemaName, helper.tableName)
-	logger.Debug().Msg(sql)
-	return sql
-}
-
 func (helper DB2Helper) CreateOlapSQL() string {
 	return fmt.Sprintf(`
 SELECT COUNT(*) AS cnt, SUM(amount) AS total_amt

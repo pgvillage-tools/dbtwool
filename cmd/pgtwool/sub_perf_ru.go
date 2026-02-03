@@ -41,7 +41,7 @@ func ruStageCommand() *cobra.Command {
 		Short: "create tables",
 		Long:  "Create the necessary schema and table(s)",
 		Run: func(_ *cobra.Command, _ []string) {
-			schema, table, err := parseSchemaTable(stageArgs.GetString("table"))
+			schema, table, err := parseSchemaTable(stageArgs.GetString(arguments.ArgTable))
 
 			if err == nil {
 				params := pg.ConnParamsFromEnv()
@@ -54,10 +54,11 @@ func ruStageCommand() *cobra.Command {
 		},
 	}
 
-	stageArgs = arguments.AllArgs.CommandArgs(stageCommand, append(globalArgs, "table"))
+	stageArgs = arguments.AllArgs.CommandArgs(stageCommand, append(globalArgs, arguments.ArgTable))
 
 	return stageCommand
 }
+
 func ruGenCommand() *cobra.Command {
 	var genArgs arguments.Args
 	genCommand := &cobra.Command{
@@ -66,7 +67,7 @@ func ruGenCommand() *cobra.Command {
 		Long:  "Use this command to generate data to test with.",
 		Run: func(_ *cobra.Command, _ []string) {
 			// not used yet
-			schema, table, err := parseSchemaTable(genArgs.GetString("table"))
+			schema, table, err := parseSchemaTable(genArgs.GetString(arguments.ArgTable))
 
 			if err == nil {
 				params := pg.ConnParamsFromEnv()
@@ -78,7 +79,7 @@ func ruGenCommand() *cobra.Command {
 					&postgresClient,
 					schema,
 					table,
-					int64(genArgs.GetUint("numOfRows")))
+					int64(genArgs.GetUint(arguments.ArgNumOfRows)))
 			} else {
 				fmt.Printf("An error occurred while parsing the schema + table: %v", err)
 			}
@@ -87,9 +88,10 @@ func ruGenCommand() *cobra.Command {
 
 	genArgs = arguments.AllArgs.CommandArgs(genCommand,
 		// revive:disable-next-line
-		append(globalArgs, "table", "numOfRows"))
+		append(globalArgs, arguments.ArgTable, arguments.ArgNumOfRows))
 	return genCommand
 }
+
 func ruTestCommand() *cobra.Command {
 	var testExecutionArgs arguments.Args
 	testExecutionCommand := &cobra.Command{
@@ -97,12 +99,12 @@ func ruTestCommand() *cobra.Command {
 		Short: "run the test",
 		Long:  "Use this command to run the test on the earlier created data.",
 		Run: func(_ *cobra.Command, _ []string) {
-			schema, table, tableParseErr := parseSchemaTable(testExecutionArgs.GetString("table"))
+			schema, table, tableParseErr := parseSchemaTable(testExecutionArgs.GetString(arguments.ArgTable))
 			if tableParseErr != nil {
 				fmt.Printf("An error occurred while parsing the schema + table: %v", tableParseErr)
 			}
 
-			iLevel, err := strconv.Atoi(testExecutionArgs.GetString("isolationLevel"))
+			iLevel, err := strconv.Atoi(testExecutionArgs.GetString(arguments.ArgIsolationLevel))
 
 			if err == nil {
 				params := pg.ConnParamsFromEnv()
@@ -114,8 +116,8 @@ func ruTestCommand() *cobra.Command {
 					&postgresClient,
 					schema,
 					table,
-					int(testExecutionArgs.GetUint("warmupTime")),
-					int(testExecutionArgs.GetUint("executionTime")),
+					int(testExecutionArgs.GetUint(arguments.ArgWarmupTime)),
+					int(testExecutionArgs.GetUint(arguments.ArgExecutionTime)),
 					pg.GetIsolationLevel(iLevel))
 				if err != nil {
 					fmt.Printf("An error occurred while trying to execute the RU performance test: %v", err)
@@ -128,7 +130,7 @@ func ruTestCommand() *cobra.Command {
 
 	testExecutionArgs = arguments.AllArgs.CommandArgs(
 		testExecutionCommand,
-		append(globalArgs, "table", "warmupTime", "executionTime", "isolationLevel"))
+		append(globalArgs, arguments.ArgTable, arguments.ArgWarmupTime, arguments.ArgExecutionTime, arguments.ArgIsolationLevel))
 
 	return testExecutionCommand
 }

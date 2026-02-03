@@ -71,9 +71,9 @@ override:
     threshold: 0.0
   - path: ^pkg/pg/connection.go$
     threshold: 25
-
   - path: ^pkg/dbclient/rdbms.go$
     threshold: 0.0
+
   - path: ^pkg/lobperformance/db2_helper.go$
     threshold: 0.0
   - path: ^pkg/lobperformance/gen.go$
@@ -86,6 +86,21 @@ override:
   - path: ^pkg/lobperformance/stage.go$
     threshold: 0.0
   - path: ^pkg/lobperformance/test_execution.go$
+    threshold: 0.0
+
+  - path: ^pkg/ruperformance/main.go$
+    threshold: 0.0
+  - path: ^pkg/ruperformance/pg_helper.go$
+    threshold: 0.0
+  - path: ^pkg/ruperformance/db_helper.go$
+    threshold: 0.0
+  - path: ^pkg/ruperformance/db2_helper.go$
+    threshold: 0.0
+  - path: ^pkg/ruperformance/gen.go$
+    threshold: 0.0
+  - path: ^pkg/ruperformance/stage.go$
+    threshold: 0.0
+  - path: ^pkg/ruperformance/test_execution.go$
     threshold: 0.0
 
   - path: ^pkg/pg/pool.go$
@@ -103,6 +118,8 @@ override:
   - path: ^pkg/dbclient$
     threshold: 0.0
   - path: ^pkg/lobperformance$
+    threshold: 0.0
+  - path: ^pkg/ruperformance$
     threshold: 0.0
 
 

@@ -40,7 +40,7 @@ func ruStageCommand() *cobra.Command {
 		Short: "create tables",
 		Long:  "Create the necessary schema and table(s)",
 		Run: func(_ *cobra.Command, _ []string) {
-			schema, table, err := parseSchemaTable(stageArgs.GetString("table"))
+			schema, table, err := parseSchemaTable(stageArgs.GetString(ArgTable))
 
 			if err == nil {
 				params := db2.NewDB2ConnparamsFromEnv()
@@ -52,7 +52,7 @@ func ruStageCommand() *cobra.Command {
 		},
 	}
 
-	stageArgs = allArgs.commandArgs(stageCommand, append(globalArgs, "table"))
+	stageArgs = allArgs.commandArgs(stageCommand, append(globalArgs, ArgTable))
 
 	return stageCommand
 }
@@ -64,7 +64,7 @@ func ruGenCommand() *cobra.Command {
 		Short: "generate all the things",
 		Long:  "Use this command to generate data to test with.",
 		Run: func(_ *cobra.Command, _ []string) {
-			schema, table, err := parseSchemaTable(genArgs.GetString("table"))
+			schema, table, err := parseSchemaTable(genArgs.GetString(ArgTable))
 
 			if err == nil {
 				params := db2.NewDB2ConnparamsFromEnv()
@@ -76,13 +76,13 @@ func ruGenCommand() *cobra.Command {
 					&db2Client,
 					schema,
 					table,
-					int64(genArgs.GetUint("numOfRows")))
+					int64(genArgs.GetUint(ArgNumOfRows)))
 			} else {
 				fmt.Printf("An error occurred while parsing the schema + table: %v", err)
 			}
 		},
 	}
-	genArgs = allArgs.commandArgs(genCommand, append(globalArgs, "table", "numOfRows"))
+	genArgs = allArgs.commandArgs(genCommand, append(globalArgs, ArgTable, ArgNumOfRows))
 	return genCommand
 }
 
@@ -93,12 +93,12 @@ func ruTestCommand() *cobra.Command {
 		Short: "run the test",
 		Long:  "Use this command to run the test on the earlier created data.",
 		Run: func(_ *cobra.Command, _ []string) {
-			schema, table, tableParseErr := parseSchemaTable(testExecutionArgs.GetString("table"))
+			schema, table, tableParseErr := parseSchemaTable(testExecutionArgs.GetString(ArgTable))
 			if tableParseErr != nil {
 				fmt.Printf("An error occurred while parsing the schema + table: %v", tableParseErr)
 			}
 
-			iLevel, isolationParseErr := strconv.Atoi(testExecutionArgs.GetString("isolationLevel"))
+			iLevel, isolationParseErr := strconv.Atoi(testExecutionArgs.GetString(ArgIsolationLevel))
 
 			if isolationParseErr == nil {
 
@@ -111,8 +111,8 @@ func ruTestCommand() *cobra.Command {
 					&db2Client,
 					schema,
 					table,
-					int(testExecutionArgs.GetUint("warmupTime")),
-					int(testExecutionArgs.GetUint("executionTime")),
+					int(testExecutionArgs.GetUint(ArgWarmupTime)),
+					int(testExecutionArgs.GetUint(ArgExecutionTime)),
 					db2.GetIsolationLevel(iLevel))
 				if err != nil {
 					fmt.Printf("An error occurred while trying to execute the RU performance test: %v", err)
@@ -125,7 +125,7 @@ func ruTestCommand() *cobra.Command {
 
 	testExecutionArgs = allArgs.commandArgs(
 		testExecutionCommand,
-		append(globalArgs, "table", "warmupTime", "executionTime", "isolationLevel"))
+		append(globalArgs, "table", ArgWarmupTime, ArgExecutionTime, ArgIsolationLevel))
 
 	return testExecutionCommand
 }
