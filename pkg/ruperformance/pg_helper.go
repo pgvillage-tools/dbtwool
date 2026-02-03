@@ -41,9 +41,3 @@ CREATE INDEX index_account_transaction_acct
 	logger.Debug().Msg(sql)
 	return sql
 }
-
-func (helper PGHelper) CreateInserSQLPrefix() string {
-	sql := fmt.Sprintf("INSERT INTO %s.%s (acct_id, txn_ts, amount, filler) VALUES ($1, $2, $3, $4)", helper.schemaName, helper.tableName)
-	logger.Debug().Msg(sql)
-	return sql
-}

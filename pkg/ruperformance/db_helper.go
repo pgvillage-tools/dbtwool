@@ -5,5 +5,4 @@ type DBHelper interface {
 	CreateSchemaSQL() string
 	CreateTableSQL() string
 	CreateIndexSQL() string
-	CreateInserSQLPrefix() string
 }

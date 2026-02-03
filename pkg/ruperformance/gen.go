@@ -23,6 +23,7 @@ type AcctTxnRowPlan struct {
 	Description string  // always 100 long
 }
 
+// Generate actually generates data and writes it to the database based on db, and data generation arguments.
 func Generate(
 	ctx context.Context,
 	dbType dbclient.RDBMS,
@@ -52,7 +53,7 @@ func Generate(
 
 	const batchSize = 100
 	logger.Info().Msgf("Generating %d rows into %s.%s (batchSize=%d)", numRows, schemaName, tableName, batchSize)
-	insertPrefix := fmt.Sprintf("INSERT INTO %s.%s (acct_id, txn_ts, amount, descr) VALUES ", schemaName, tableName) //works on all relevent rdbms
+	insertPrefix := fmt.Sprintf("INSERT INTO %s.%s (acct_id, txn_ts, amount, descr) VALUES ", schemaName, tableName)
 
 	// Stable base so runs are comparable.
 	baseTS := time.Now().UTC().Truncate(time.Second)
@@ -69,7 +70,7 @@ func Generate(
 
 		committed := false
 
-		//should probably be seperate function:
+		// should probably be separate function:
 		func() {
 			defer func() {
 				if !committed {
@@ -77,28 +78,7 @@ func Generate(
 				}
 			}()
 
-			var sb strings.Builder
-			sb.Grow((end - start) * 220)
-			sb.WriteString(insertPrefix)
-
-			for i := start; i < end; i++ {
-				rowIdx := int64(i)
-
-				acctID := pickSkewedAcctID(seed, rowIdx)
-				ts := baseTS.Add(time.Duration(rowIdx) * time.Millisecond)
-				amt := pickAmount(seed, rowIdx)
-				descr := generateDescription(100, seed, rowIdx)
-				tsLit := timestampLiteral(dbType, ts)
-				amtLit := formatAmountLiteral(amt)
-				fillerLit := sqlStringLiteral(descr)
-
-				if i > start {
-					sb.WriteString(",")
-				}
-				sb.WriteString(fmt.Sprintf("(%d, %s, %s, %s)", acctID, tsLit, amtLit, fillerLit))
-			}
-
-			sql := sb.String()
+			sql := buildInsertSQL(dbType, insertPrefix, baseTS, seed, start, end)
 
 			if _, err := conn.Execute(ctx, sql); err != nil {
 				logger.Error().Msgf("batch insert failed (rows %d..%d): %v", start+1, end, err)
@@ -122,6 +102,38 @@ func Generate(
 	logger.Info().Msg("Generate transactions completed.")
 }
 
+func buildInsertSQL(
+	dbType dbclient.RDBMS,
+	insertPrefix string,
+	baseTS time.Time,
+	seed uint64,
+	start, end int,
+) string {
+	var sb strings.Builder
+	sb.Grow((end - start) * stringBufferallocation)
+	sb.WriteString(insertPrefix)
+
+	for i := start; i < end; i++ {
+		rowIdx := int64(i)
+
+		acctID := pickSkewedAcctID(seed, rowIdx)
+		ts := baseTS.Add(time.Duration(rowIdx) * time.Millisecond)
+		amt := pickAmount(seed, rowIdx)
+		descr := generateDescription(descriptionLength, seed, rowIdx)
+
+		tsLit := timestampLiteral(dbType, ts)
+		amtLit := formatAmountLiteral(amt)
+		descrLit := sqlStringLiteral(descr)
+
+		if i > start {
+			sb.WriteString(",")
+		}
+		sb.WriteString(fmt.Sprintf("(%d, %s, %s, %s)", acctID, tsLit, amtLit, descrLit))
+	}
+
+	return sb.String()
+}
+
 // functions to make literals for building the insert statements (sadly some rdbms specific logic heres)
 func timestampLiteral(dbType dbclient.RDBMS, t time.Time) string {
 	if dbType == dbclient.DB2 {
@@ -143,18 +155,18 @@ func pickSkewedAcctID(seed uint64, rowIdx int64) int {
 	u := hashU64(seed, uint64(rowIdx), 0)
 	p := int(u % 100)
 
-	if p < 60 {
-		return 1 + int(hashU64(seed, uint64(rowIdx), 1)%50)
+	if p < hotAccountPercentage {
+		return 1 + int(hashU64(seed, uint64(rowIdx), 1)%hotAccountCount)
 	}
-	return 51 + int(hashU64(seed, uint64(rowIdx), 2)%(10000-50))
+	return hotAccountCount + int(hashU64(seed, uint64(rowIdx), 2)%(totalAccountCount-hotAccountCount))
 }
 
 func pickAmount(seed uint64, rowIdx int64) float64 {
 	u := hashU64(seed, uint64(rowIdx), 3)
-	v := int64(u%1_000_001) - 500_000
-	amt := float64(v) / 100.0
-	// avoid -0.00
-	if math.Abs(amt) < 0.005 {
+	v := int64(u%(2*amountRangeHalfCents+1)) - amountRangeHalfCents
+	amt := float64(v) / amountScale
+
+	if math.Abs(amt) < amountZeroThreshold {
 		amt = 0
 	}
 	return amt

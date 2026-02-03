@@ -39,7 +39,7 @@ func lobStageCommand() *cobra.Command {
 		Short: "create tables",
 		Long:  "Create the necessary schema and table(s)",
 		Run: func(_ *cobra.Command, _ []string) {
-			schema, table, err := parseSchemaTable(stageArgs.GetString("table"))
+			schema, table, err := parseSchemaTable(stageArgs.GetString(arguments.ArgTable))
 
 			if err == nil {
 				params := pg.ConnParamsFromEnv()
@@ -53,7 +53,7 @@ func lobStageCommand() *cobra.Command {
 		},
 	}
 
-	stageArgs = arguments.AllArgs.CommandArgs(stageCommand, append(globalArgs, "table"))
+	stageArgs = arguments.AllArgs.CommandArgs(stageCommand, append(globalArgs, arguments.ArgTable))
 
 	return stageCommand
 }
@@ -65,10 +65,10 @@ func lobGenCommand() *cobra.Command {
 		Short: "generate all the things",
 		Long:  "Use this command to generate data to test with.",
 		Run: func(_ *cobra.Command, _ []string) {
-			fmt.Printf("lob-performance test: %s\n", genArgs.GetString("randomizerSeed"))
+			fmt.Printf("lob-performance test: %s\n", genArgs.GetString(arguments.ArgRandomizerSeed))
 
 			// not used yet
-			schema, table, err := parseSchemaTable(genArgs.GetString("table"))
+			schema, table, err := parseSchemaTable(genArgs.GetString(arguments.ArgTable))
 
 			if err == nil {
 				params := pg.ConnParamsFromEnv()
@@ -80,19 +80,25 @@ func lobGenCommand() *cobra.Command {
 					&postgresClient,
 					schema,
 					table,
-					genArgs.GetStringSlice("spread"),
-					int64(genArgs.GetUint("emptyLobs")),
-					genArgs.GetString("byteSize"),
-					genArgs.GetString("lobType"))
+					genArgs.GetStringSlice(arguments.ArgSpread),
+					int64(genArgs.GetUint(arguments.ArgEmptyLobs)),
+					genArgs.GetString(arguments.ArgByteSize),
+					genArgs.GetString(arguments.ArgLobType))
 			} else {
 				fmt.Printf("An error occurred while parsing the schema + table: %v", err)
 			}
 		},
 	}
 
-	genArgs = arguments.AllArgs.CommandArgs(genCommand,
-		// revive:disable-next-line
-		append(globalArgs, "spread", "byteSize", "table", "emptyLobs", "lobType", "randomizerSeed"))
+	genArgs = arguments.AllArgs.CommandArgs(
+		genCommand,
+		append(globalArgs,
+			arguments.ArgSpread,
+			arguments.ArgByteSize,
+			arguments.ArgTable,
+			arguments.ArgEmptyLobs,
+			arguments.ArgLobType,
+			arguments.ArgRandomizerSeed))
 	return genCommand
 }
 
@@ -103,7 +109,7 @@ func lobTestCommand() *cobra.Command {
 		Short: "run the test",
 		Long:  "Use this command to run the test on the earlier created data.",
 		Run: func(_ *cobra.Command, _ []string) {
-			schema, table, err := parseSchemaTable(testExecutionArgs.GetString("table"))
+			schema, table, err := parseSchemaTable(testExecutionArgs.GetString(arguments.ArgTable))
 
 			if err == nil {
 				params := pg.ConnParamsFromEnv()
@@ -115,12 +121,12 @@ func lobTestCommand() *cobra.Command {
 					&postgresClient,
 					schema,
 					table,
-					testExecutionArgs.GetString("randomizerSeed"),
-					int(testExecutionArgs.GetUint("parallel")),
-					int(testExecutionArgs.GetUint("warmupTime")),
-					int(testExecutionArgs.GetUint("executionTime")),
-					testExecutionArgs.GetString("readMode"),
-					testExecutionArgs.GetString("lobType"))
+					testExecutionArgs.GetString(arguments.ArgRandomizerSeed),
+					int(testExecutionArgs.GetUint(arguments.ArgParallel)),
+					int(testExecutionArgs.GetUint(arguments.ArgWarmupTime)),
+					int(testExecutionArgs.GetUint(arguments.ArgExecutionTime)),
+					testExecutionArgs.GetString(arguments.ArgReadMode),
+					testExecutionArgs.GetString(arguments.ArgLobType))
 
 				if err != nil {
 					fmt.Printf("An error occurred while trying to execute the LOB performance test: %v", err)
@@ -131,9 +137,17 @@ func lobTestCommand() *cobra.Command {
 		},
 	}
 
-	testExecutionArgs = arguments.AllArgs.CommandArgs(testExecutionCommand,
-		// revive:disable-next-line
-		append(globalArgs, "table", "randomizerSeed", "parallel", "warmupTime", "executionTime", "readMode", "lobType"))
+	testExecutionArgs = arguments.AllArgs.CommandArgs(
+		testExecutionCommand,
+		append(
+			globalArgs,
+			arguments.ArgTable,
+			arguments.ArgRandomizerSeed,
+			arguments.ArgParallel,
+			arguments.ArgWarmupTime,
+			arguments.ArgExecutionTime,
+			arguments.ArgReadMode,
+			arguments.ArgLobType))
 
 	return testExecutionCommand
 }
