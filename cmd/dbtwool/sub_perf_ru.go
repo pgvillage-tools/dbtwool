@@ -45,7 +45,10 @@ func ruStageCommand() *cobra.Command {
 			if err == nil {
 				params := db2.NewDB2ConnparamsFromEnv()
 				db2Client := db2.NewClient(params)
-				ruperformance.Stage(context.Background(), dbclient.DB2, &db2Client, schema, table)
+				if stageErr := ruperformance.Stage(context.Background(), dbclient.DB2, &db2Client, schema, table); stageErr != nil {
+					fmt.Printf("An error occurred while staging RU performance: %v", stageErr)
+					return
+				}
 			} else {
 				fmt.Printf("An error occurred while parsing the schema + table: %v", err)
 			}
