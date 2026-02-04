@@ -19,7 +19,7 @@ type AcctTxnRowPlan struct {
 	RowIndex    int64
 	AcctID      int
 	TxnTS       time.Time
-	Amount      float64 // decmial
+	Amount      float64 // decimal
 	Description string  // always 100 long
 }
 
@@ -58,6 +58,10 @@ func Generate(
 	// Stable base so runs are comparable.
 	baseTS := time.Now().UTC().Truncate(time.Second)
 	const seed uint64 = 0xC0FFEE12345
+
+	if numRows > int64(math.MaxInt) {
+		logger.Fatal().Msgf("numRows %d exceeds maximum supported value", numRows)
+	}
 
 	total := int(numRows)
 	for start := 0; start < total; start += batchSize {
