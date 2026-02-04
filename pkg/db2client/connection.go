@@ -23,7 +23,7 @@ func (c *Connection) Close(_ context.Context) error {
 // SetIsolationLevel can be used to change the isolation level on a connection
 func (c *Connection) SetIsolationLevel(ctx context.Context, isoLevel dbinterface.IsolationLevel) error {
 	qryIsoLevel := isoLevel.AsQuery()
-	logger.Info().Msgf("CONN2: %s", qryIsoLevel)
+	logger.Info().Msgf("Set Isolation Level: %s", qryIsoLevel)
 	_, err := c.Execute(ctx, qryIsoLevel)
 	return err
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	db2 "github.com/pgvillage-tools/dbtwool/pkg/db2client"
@@ -44,7 +45,14 @@ func ruStageCommand() *cobra.Command {
 			if err == nil {
 				params := db2.NewDB2ConnparamsFromEnv()
 				db2Client := db2.NewClient(params)
-				ruperformance.Stage(context.Background(), dbclient.DB2, &db2Client, schema, table)
+				if stageErr := ruperformance.Stage(
+					context.Background(),
+					dbclient.DB2,
+					&db2Client,
+					schema, table); stageErr != nil {
+					fmt.Printf("An error occurred while staging RU performance: %v", stageErr)
+					return
+				}
 			} else {
 				fmt.Printf("An error occurred while parsing the schema + table: %v", err)
 			}
@@ -86,18 +94,44 @@ func ruGenCommand() *cobra.Command {
 }
 
 func ruTestCommand() *cobra.Command {
-	var testCmdArgs args
+	var testExecutionArgs args
 	testExecutionCommand := &cobra.Command{
 		Use:   "test",
 		Short: "run the test",
 		Long:  "Use this command to run the test on the earlier created data.",
 		Run: func(_ *cobra.Command, _ []string) {
-			fmt.Printf("test: %d\n", testCmdArgs.GetUint(ArgParallel))
-			fmt.Printf("test: %s\n", testCmdArgs.GetString(ArgTable))
+			schema, table, tableParseErr := parseSchemaTable(testExecutionArgs.GetString(ArgTable))
+			if tableParseErr != nil {
+				fmt.Printf("An error occurred while parsing the schema + table: %v", tableParseErr)
+			}
+
+			iLevel, isolationParseErr := strconv.Atoi(testExecutionArgs.GetString(ArgIsolationLevel))
+
+			if isolationParseErr == nil {
+				params := db2.NewDB2ConnparamsFromEnv()
+				db2Client := db2.NewClient(params)
+
+				err := ruperformance.ExecuteTest(
+					context.Background(),
+					dbclient.DB2,
+					&db2Client,
+					schema,
+					table,
+					int(testExecutionArgs.GetUint(ArgWarmupTime)),
+					int(testExecutionArgs.GetUint(ArgExecutionTime)),
+					db2.GetIsolationLevel(iLevel))
+				if err != nil {
+					fmt.Printf("An error occurred while trying to execute the RU performance test: %v", err)
+				}
+			} else {
+				fmt.Printf("An error occurred while parsing the isolation level: %v", isolationParseErr)
+			}
 		},
 	}
 
-	testCmdArgs = allArgs.commandArgs(testExecutionCommand, append(globalArgs, ArgParallel, ArgTable))
+	testExecutionArgs = allArgs.commandArgs(
+		testExecutionCommand,
+		append(globalArgs, ArgTable, ArgWarmupTime, ArgExecutionTime, ArgIsolationLevel))
 
 	return testExecutionCommand
 }

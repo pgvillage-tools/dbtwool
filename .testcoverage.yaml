@@ -102,6 +102,8 @@ override:
     threshold: 0.0
   - path: ^pkg/ruperformance/test_execution.go$
     threshold: 0.0
+  - path: ^pkg/ruperformance/testmetrics.go$
+    threshold: 0.0
 
   - path: ^pkg/pg/pool.go$
     threshold: 0.0
