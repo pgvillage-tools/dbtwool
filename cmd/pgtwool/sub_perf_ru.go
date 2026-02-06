@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/pgvillage-tools/dbtwool/internal/arguments"
@@ -65,7 +66,9 @@ func ruGenCommand() *cobra.Command {
 		Short: "generate all the things",
 		Long:  "Use this command to generate data to test with.",
 		Run: func(_ *cobra.Command, _ []string) {
+			// not used yet
 			schema, table, err := parseSchemaTable(genArgs.GetString(arguments.ArgTable))
+
 			if err == nil {
 				params := pg.ConnParamsFromEnv()
 				postgresClient := pg.NewClient(params)
@@ -90,22 +93,48 @@ func ruGenCommand() *cobra.Command {
 }
 
 func ruTestCommand() *cobra.Command {
-	var testCmdArgs arguments.Args
+	var testExecutionArgs arguments.Args
 	testExecutionCommand := &cobra.Command{
 		Use:   "test",
 		Short: "run the test",
 		Long:  "Use this command to run the test on the earlier created data.",
 		Run: func(_ *cobra.Command, _ []string) {
-			fmt.Printf("test: %d\n", testCmdArgs.GetUint(arguments.ArgParallel))
-			fmt.Printf("test: %s\n", testCmdArgs.GetString(arguments.ArgTable))
+			schema, table, tableParseErr := parseSchemaTable(testExecutionArgs.GetString(arguments.ArgTable))
+			if tableParseErr != nil {
+				fmt.Printf("An error occurred while parsing the schema + table: %v", tableParseErr)
+			}
+
+			iLevel, err := strconv.Atoi(testExecutionArgs.GetString(arguments.ArgIsolationLevel))
+
+			if err == nil {
+				params := pg.ConnParamsFromEnv()
+				postgresClient := pg.NewClient(params)
+
+				err := ruperformance.ExecuteTest(
+					context.Background(),
+					dbclient.Postgres,
+					&postgresClient,
+					schema,
+					table,
+					int(testExecutionArgs.GetUint(arguments.ArgWarmupTime)),
+					int(testExecutionArgs.GetUint(arguments.ArgExecutionTime)),
+					pg.GetIsolationLevel(iLevel))
+				if err != nil {
+					fmt.Printf("An error occurred while trying to execute the RU performance test: %v", err)
+				}
+			} else {
+				fmt.Printf("An error occurred while parsing the isolation level: %v", err)
+			}
 		},
 	}
 
-	testCmdArgs = arguments.AllArgs.CommandArgs(
+	testExecutionArgs = arguments.AllArgs.CommandArgs(
 		testExecutionCommand,
 		append(globalArgs,
-			arguments.ArgParallel,
-			arguments.ArgTable))
+			arguments.ArgTable,
+			arguments.ArgWarmupTime,
+			arguments.ArgExecutionTime,
+			arguments.ArgIsolationLevel))
 
 	return testExecutionCommand
 }

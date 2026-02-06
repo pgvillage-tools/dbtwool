@@ -8,10 +8,10 @@ type IsolationLevel int
 const (
 	// UncommittedRead defines the Uncommitted Read isolation level
 	UncommittedRead IsolationLevel = iota
-	// ReadStability defines the Read Stability isolation level
-	ReadStability
 	// CursorStability defines the Cursor Stability isolation level
 	CursorStability
+	// ReadStability defines the Read Stability isolation level
+	ReadStability
 	// RepeatableRead defines the Repeatable Read isolation level
 	RepeatableRead
 )
@@ -19,8 +19,8 @@ const (
 var (
 	levelToSting = map[IsolationLevel]string{
 		UncommittedRead: "UR",
-		ReadStability:   "RS",
 		CursorStability: "CS",
+		ReadStability:   "RS",
 		RepeatableRead:  "RR",
 	}
 )

@@ -73,7 +73,6 @@ func Generate(
 		}
 
 		committed := false
-
 		// should probably be separate function:
 		func() {
 			defer func() {
