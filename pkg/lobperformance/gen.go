@@ -23,7 +23,7 @@ type LOBRowPlan struct {
 
 // Generate generates LOB data
 func Generate(ctx context.Context, dbType dbclient.RDBMS, client dbinterface.Client,
-	schemaName string, tableName string, spread []string, emptyLobs int64, byteSize string,
+	schemaName string, tableName string, spread []string, emptyLobs int64, byteSize string, batchSize string,
 	lobType string) {
 	var logger = log.With().Logger()
 	logger.Info().Msg("Initiating connection pool.")

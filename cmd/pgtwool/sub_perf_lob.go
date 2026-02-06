@@ -83,6 +83,7 @@ func lobGenCommand() *cobra.Command {
 					genArgs.GetStringSlice(arguments.ArgSpread),
 					int64(genArgs.GetUint(arguments.ArgEmptyLobs)),
 					genArgs.GetString(arguments.ArgByteSize),
+					genArgs.GetString(arguments.ArgBatchSize),
 					genArgs.GetString(arguments.ArgLobType))
 			} else {
 				fmt.Printf("An error occurred while parsing the schema + table: %v", err)
@@ -98,7 +99,7 @@ func lobGenCommand() *cobra.Command {
 			arguments.ArgTable,
 			arguments.ArgEmptyLobs,
 			arguments.ArgLobType,
-			arguments.ArgRandomizerSeed))
+			arguments.ArgBatchSize))
 	return genCommand
 }
 
