@@ -113,18 +113,11 @@ func processLobBatch(
 		if row.LobType != lobType {
 			return fmt.Errorf(
 				"mixed lob types in batch %d at position %d: %q vs %q",
-				batchIndex,
-				i,
-				lobType,
-				row.LobType,
+				batchIndex, i, lobType, row.LobType,
 			)
 		}
 		if row.LobBytes < 0 {
-			return fmt.Errorf(
-				"negative lob size in batch %d at row %d",
-				batchIndex,
-				row.RowIndex,
-			)
+			return fmt.Errorf("negative lob size in batch %d at row %d", batchIndex, row.RowIndex)
 		}
 	}
 
@@ -140,8 +133,21 @@ func processLobBatch(
 		}
 	}()
 
-	var rowsAltered int64
-	var totalBytes int64
+	var (
+		rowsAltered int64
+		totalBytes  int64
+	)
+
+	// Prefer prepared statement if available
+	var preparedStatement dbinterface.PreparedStatement
+	if tp, ok := any(conn).(dbinterface.TxPreparer); ok {
+		s, err := tp.PrepareInTx(ctx, insertSQL)
+		if err != nil {
+			return fmt.Errorf("prepare failed for batch %d: %w", batchIndex, err)
+		}
+		preparedStatement = s
+		defer func() { _ = preparedStatement.Close(ctx) }()
+	}
 
 	for _, row := range batch {
 		payload, err := createLobPayload(row.LobType, row.LobBytes)
@@ -149,7 +155,12 @@ func processLobBatch(
 			return fmt.Errorf("create payload failed for row_index=%d: %w", row.RowIndex, err)
 		}
 
-		ra, err := conn.ExecuteWithPayload(ctx, insertSQL, payload, row.TenantID, row.DocType)
+		var ra int64
+		if preparedStatement != nil {
+			ra, err = preparedStatement.ExecWithPayload(ctx, payload, row.TenantID, row.DocType)
+		} else {
+			ra, err = conn.ExecuteWithPayload(ctx, insertSQL, payload, row.TenantID, row.DocType)
+		}
 		if err != nil {
 			return fmt.Errorf("insert failed for row_index=%d: %w", row.RowIndex, err)
 		}
