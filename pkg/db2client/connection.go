@@ -3,6 +3,7 @@ package db2client
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -30,7 +31,16 @@ func (c *Connection) SetIsolationLevel(ctx context.Context, isoLevel dbinterface
 
 // Execute will execute a query and return number of affected rows
 func (c *Connection) Execute(ctx context.Context, query string) (int64, error) {
-	r, err := c.conn.ExecContext(ctx, query)
+	var (
+		r   sql.Result
+		err error
+	)
+
+	if c.tx != nil {
+		r, err = c.tx.ExecContext(ctx, query)
+	} else {
+		r, err = c.conn.ExecContext(ctx, query)
+	}
 	if err != nil {
 		return 0, err
 	}
@@ -39,7 +49,16 @@ func (c *Connection) Execute(ctx context.Context, query string) (int64, error) {
 
 // Query will execute a query and return a list of maps where every list item is a row and every map item is a column
 func (c *Connection) Query(ctx context.Context, query string, args ...any) ([]map[string]any, error) {
-	rows, err := c.conn.QueryContext(ctx, query, args...)
+	var (
+		rows *sql.Rows
+		err  error
+	)
+
+	if c.tx != nil {
+		rows, err = c.tx.QueryContext(ctx, query, args...)
+	} else {
+		rows, err = c.conn.QueryContext(ctx, query, args...)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -60,6 +79,9 @@ func (c *Connection) QueryOneRow(ctx context.Context, query string, args ...any)
 
 // Begin starts a transaction. In this case there is a one-on-one relation between the transaction and the connection
 func (c *Connection) Begin(ctx context.Context) error {
+	if c.tx != nil {
+		return errors.New("transaction already active")
+	}
 	tx, err := c.conn.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -70,24 +92,22 @@ func (c *Connection) Begin(ctx context.Context) error {
 
 // Commit will commit the connection
 func (c *Connection) Commit(_ context.Context) error {
-	if c.tx != nil {
-		if err := c.tx.Commit(); err != nil {
-			return err
-		}
-		c.tx = nil
+	if c.tx == nil {
+		return errors.New("no active transaction")
 	}
-	return nil
+	err := c.tx.Commit()
+	c.tx = nil
+	return err
 }
 
 // Rollback will rollback the transaction
 func (c *Connection) Rollback(_ context.Context) error {
-	if c.tx != nil {
-		if err := c.tx.Rollback(); err != nil {
-			return err
-		}
-		c.tx = nil
+	if c.tx == nil {
+		return errors.New("no active transaction")
 	}
-	return nil
+	err := c.tx.Rollback()
+	c.tx = nil
+	return err
 }
 
 func rowsToMaps(rows *sql.Rows) ([]map[string]any, error) {
