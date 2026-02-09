@@ -71,7 +71,7 @@ func lobGenCommand() *cobra.Command {
 				params := pg.ConnParamsFromEnv()
 				postgresClient := pg.NewClient(params)
 
-				lobperformance.Generate(
+				lobperformance.GenerateBulk(
 					context.Background(),
 					dbclient.Postgres,
 					&postgresClient,
