@@ -37,7 +37,7 @@ func ExecuteTest(
 		return fmt.Errorf("failed to init pool: %w", err)
 	}
 
-	dbHelper := getDBHelper(dbType, tableName, schemaName)
+	dbHelper := getDBHelper(dbType, schemaName, tableName)
 	olapSQL := dbHelper.CreateOlapSQL()
 
 	totalCtx, cancelTotal := context.WithTimeout(
