@@ -65,9 +65,6 @@ func lobGenCommand() *cobra.Command {
 		Short: "generate all the things",
 		Long:  "Use this command to generate data to test with.",
 		Run: func(_ *cobra.Command, _ []string) {
-			fmt.Printf("lob-performance test: %s\n", genArgs.GetString(arguments.ArgRandomizerSeed))
-
-			// not used yet
 			schema, table, err := parseSchemaTable(genArgs.GetString(arguments.ArgTable))
 
 			if err == nil {
@@ -83,6 +80,7 @@ func lobGenCommand() *cobra.Command {
 					genArgs.GetStringSlice(arguments.ArgSpread),
 					int64(genArgs.GetUint(arguments.ArgEmptyLobs)),
 					genArgs.GetString(arguments.ArgByteSize),
+					int(genArgs.GetUint(arguments.ArgBatchSize)),
 					genArgs.GetString(arguments.ArgLobType))
 			} else {
 				fmt.Printf("An error occurred while parsing the schema + table: %v", err)
@@ -98,7 +96,7 @@ func lobGenCommand() *cobra.Command {
 			arguments.ArgTable,
 			arguments.ArgEmptyLobs,
 			arguments.ArgLobType,
-			arguments.ArgRandomizerSeed))
+			arguments.ArgBatchSize))
 	return genCommand
 }
 

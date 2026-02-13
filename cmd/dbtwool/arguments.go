@@ -30,6 +30,7 @@ const (
 	ArgIsolationLevel = "isolationLevel"
 	ArgSpread         = "spread"
 	ArgByteSize       = "byteSize"
+	ArgBatchSize      = "batchSize"
 	ArgLobType        = "lobType"
 	ArgEmptyLobs      = "emptyLobs"
 	ArgRandomizerSeed = "randomizerSeed"
@@ -105,6 +106,8 @@ var (
 			desc: `spread. By default everything is 8 bytes`},
 		ArgByteSize: {short: "b", defValue: "1kb", argType: typeString,
 			desc: `What the size of the datasource should be in b, kb, gb, etc.`},
+		ArgBatchSize: {short: "B", defValue: uint(50), argType: typeUInt,
+			desc: `Number of inserts in one batch transactions`},
 		ArgLobType: {short: "l", defValue: "blob", argType: typeString,
 			desc: `What type of large object. (BLOB, CLOB, JSONB, etc.)`},
 		ArgEmptyLobs: {short: "e", defValue: uint(0), argType: typeUInt,
