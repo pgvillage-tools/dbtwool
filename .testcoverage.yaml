@@ -116,7 +116,7 @@ override:
   - path: ^pkg/dbinterface$
     threshold: 0.0
   - path: ^pkg/pg$  
-    threshold: 23
+    threshold: 10
   - path: ^pkg/dbclient$
     threshold: 0.0
   - path: ^pkg/lobperformance$
