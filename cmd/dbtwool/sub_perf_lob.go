@@ -106,7 +106,8 @@ func lobGenCommand() *cobra.Command {
 		ArgTable,
 		ArgEmptyLobs,
 		ArgLobType,
-		ArgBatchSize))
+		ArgBatchSize,
+		ArgBulkInsert))
 	return genCommand
 }
 
