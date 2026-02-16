@@ -2,6 +2,7 @@ package pg
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"hash/fnv"
 
@@ -33,10 +34,10 @@ func (s *pgPreparedStmt) Close(_ context.Context) error {
 	return nil
 }
 
-// PrepareInTx: Prepare in transaction implementation for PostgreSQL
+// PrepareInTx implementation for PostgreSQL
 func (c *Connection) PrepareInTx(ctx context.Context, sqlText string) (dbinterface.PreparedStatement, error) {
 	if c.tx == nil {
-		return nil, fmt.Errorf("PrepareInTx requires active transaction")
+		return nil, errors.New("PrepareInTx requires active transaction")
 	}
 	// Name should be stable per connection+SQL.
 	name := stmtNameForSQL(sqlText)

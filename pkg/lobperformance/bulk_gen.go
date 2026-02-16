@@ -2,13 +2,13 @@ package lobperformance
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/pgvillage-tools/dbtwool/pkg/dbclient"
 	"github.com/pgvillage-tools/dbtwool/pkg/dbinterface"
-	"github.com/rs/zerolog/log"
 )
 
 // GenerateBulk generates LOB data and inserts using the bulk path (COPY/LOAD) via processLobRowsBatchBulk.
@@ -17,88 +17,94 @@ func GenerateBulk(
 	ctx context.Context,
 	dbType dbclient.RDBMS,
 	client dbinterface.Client,
-	schemaName string,
-	tableName string,
+	schemaName, tableName string,
 	spread []string,
 	emptyLobs int64,
 	byteSize string,
 	batchSize int,
 	lobType string,
 ) {
-	var logger = log.With().Logger()
+	conn := mustConnect(ctx, client)
+	defer conn.Close(ctx)
 
+	totalBytes := mustParseByteSize(byteSize)
+	buckets := createSpreadBuckets(spread)
+
+	plan := mustBuildLOBPlan(totalBytes, lobType, buckets, emptyLobs)
+	logger.Info().Msgf("Plan built: %d rows; batch size %d", len(plan), batchSize)
+
+	const randomSeed = 12345
+	idx := ShuffledIndices(len(plan), randomSeed)
+	startedAt := time.Now()
+
+	for b, start := 0, 0; start < len(idx); b, start = b+1, start+batchSize {
+		end := min(start+batchSize, len(idx))
+		rows := mustBuildBatchRows(plan, idx[start:end])
+
+		doneAfter := end
+		logger.Info().Msgf(
+			"Inserting LOBs %d to %d of %d (%.3f%%, ETA %s)",
+			start+1, end, len(plan),
+			progressPct(doneAfter, len(idx)),
+			estimateRemaining(startedAt, doneAfter, len(idx)).Truncate(time.Second),
+		)
+
+		if err := processLobRowsBatchBulk(ctx, conn, schemaName, tableName, rows, b); err != nil {
+			logger.Fatal().Msgf("Something went wrong while processing the bulk LOB batch: %v", err)
+		}
+	}
+}
+
+// --- small helpers used by GenerateBulk ---
+func mustConnect(ctx context.Context, client dbinterface.Client) dbinterface.Connection {
 	logger.Info().Msg("Initiating connection pool.")
-	pool, poolErr := client.Pool(ctx)
-	if poolErr != nil {
-		logger.Fatal().Msgf("Failed to connect: %v", poolErr)
+	pool, err := client.Pool(ctx)
+	if err != nil {
+		logger.Fatal().Msgf("Failed to connect: %v", err)
 	}
 
 	logger.Info().Msg("Connecting to database.")
-	conn, connectErr1 := pool.Connect(ctx)
-	if connectErr1 != nil {
-		logger.Fatal().Msgf("connect error for connection 1: %v", connectErr1)
+	conn, err := pool.Connect(ctx)
+	if err != nil {
+		logger.Fatal().Msgf("connect error: %v", err)
 	}
-	defer conn.Close(ctx)
+	return conn
+}
 
-	// Interpret byte size
+func mustParseByteSize(byteSize string) int64 {
 	totalBytes, err := ParseByteSize(byteSize)
 	if err != nil {
 		logger.Fatal().Msgf("Cannot parse bytes from byteSize argument: %v", err)
 	}
 	logger.Info().Msgf("Totalbytes set to %v", totalBytes)
+	return totalBytes
+}
 
-	var buckets = createSpreadBuckets(spread)
-
+func mustBuildLOBPlan(totalBytes int64, lobType string, buckets []SpreadBucket, emptyLobs int64) []LOBRowPlan {
 	logger.Info().Msg("Building LOB generation plan")
-	plan, err := BuildLOBPlan(totalBytes, lobType, buckets, int64(emptyLobs))
+	plan, err := BuildLOBPlan(totalBytes, lobType, buckets, emptyLobs)
 	if err != nil {
 		logger.Fatal().Msgf("Something went wrong building the LOB generation plan: %v", err)
 	}
+	return plan
+}
 
-	totalNumOfRows := len(plan)
-	logger.Info().Msgf("Building LOB generation plan finished. %v rows will be inserted.", totalNumOfRows)
-	logger.Info().Msgf("Batch size set to %v", batchSize)
-
-	const randomSeed = 12345
-	idx := ShuffledIndices(len(plan), randomSeed)
-	total := len(idx)
-	startedAt := time.Now()
-
-	for start := 0; start < len(idx); start += batchSize {
-		end := min(start+batchSize, len(idx))
-		rows := make([]dbinterface.LobRow, 0, end-start)
-
-		for _, k := range idx[start:end] {
-			p := plan[k]
-
-			payload, err := createLobPayload(p.LobType, p.LobBytes)
-			if err != nil {
-				logger.Fatal().Msgf("create payload failed for row_index=%d: %v", p.RowIndex, err)
-			}
-
-			rows = append(rows, dbinterface.LobRow{
-				TenantID: p.TenantID,
-				DocType:  p.DocType,
-				LobType:  strings.ToLower(p.LobType),
-				Payload:  payload, // []byte or string
-			})
-		}
-
-		// "done" after this batch completes successfully
-		doneAfter := end
-		pct := progressPct(doneAfter, total)
-		eta := estimateRemaining(startedAt, doneAfter, total)
-
-		logger.Info().Msgf(
-			"Inserting LOBs %d to %d of %d (%.3f%%, ETA %s)",
-			start+1, end, totalNumOfRows, pct, eta.Truncate(time.Second),
-		)
-
-		err := processLobRowsBatchBulk(ctx, conn, schemaName, tableName, rows, start/batchSize)
+func mustBuildBatchRows(plan []LOBRowPlan, batchIdx []int) []dbinterface.LobRow {
+	rows := make([]dbinterface.LobRow, 0, len(batchIdx))
+	for _, k := range batchIdx {
+		p := plan[k]
+		payload, err := createLobPayload(p.LobType, p.LobBytes)
 		if err != nil {
-			logger.Fatal().Msgf("Something went wrong while processing the bulk LOB batch: %v", err)
+			logger.Fatal().Msgf("create payload failed for row_index=%d: %v", p.RowIndex, err)
 		}
+		rows = append(rows, dbinterface.LobRow{
+			TenantID: p.TenantID,
+			DocType:  p.DocType,
+			LobType:  strings.ToLower(p.LobType),
+			Payload:  payload,
+		})
 	}
+	return rows
 }
 
 func processLobRowsBatchBulk(
@@ -110,7 +116,7 @@ func processLobRowsBatchBulk(
 ) error {
 	bi, ok := any(conn).(dbinterface.BulkInserter)
 	if !ok {
-		return fmt.Errorf("bulk mode requested but connection does not support bulk insert")
+		return errors.New("bulk mode requested but connection does not support bulk insert")
 	}
 
 	insRows, insBytes, err := bi.InsertLOBRowsBulk(ctx, schema, table, rows)

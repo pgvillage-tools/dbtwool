@@ -40,6 +40,7 @@ const (
 	ArgExecutionTime  = "executionTime"
 	ArgReadMode       = "readMode"
 	ArgNumOfRows      = "numOfRows"
+	ArgBulkInsert     = "bulkInsert"
 )
 
 var (
@@ -126,6 +127,8 @@ var (
 			desc: `How the reading of LOBs is distributed. 'scattered' or 'sequential'. leave empty for scattered.`},
 		ArgNumOfRows: {short: "n", defValue: uint(10000000), argType: typeUInt,
 			desc: `How many rows to generate`},
+		ArgBulkInsert: {short: "u", defValue: false, argType: typeBool,
+			desc: `Use bulk insertion. (Not possible remotely with DB2. Execute on host.)`},
 	}
 )
 

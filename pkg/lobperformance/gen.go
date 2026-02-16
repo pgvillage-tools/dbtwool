@@ -107,18 +107,8 @@ func processLobBatch(
 		return nil
 	}
 
-	// Basic batch-level validation
-	lobType := batch[0].LobType
-	for i, row := range batch {
-		if row.LobType != lobType {
-			return fmt.Errorf(
-				"mixed lob types in batch %d at position %d: %q vs %q",
-				batchIndex, i, lobType, row.LobType,
-			)
-		}
-		if row.LobBytes < 0 {
-			return fmt.Errorf("negative lob size in batch %d at row %d", batchIndex, row.RowIndex)
-		}
+	if err := validateBatch(batch, batchIndex); err != nil {
+		return err
 	}
 
 	// Begin one transaction for the entire batch
@@ -179,8 +169,24 @@ func processLobBatch(
 		Int("rows", len(batch)).
 		Int64("rows_altered", rowsAltered).
 		Int64("lob_bytes", totalBytes).
-		Str("lob_type", lobType).
 		Msg("Inserted LOB batch finished")
+
+	return nil
+}
+
+func validateBatch(batch []LOBRowPlan, batchIndex int) error {
+	lobType := batch[0].LobType
+	for i, row := range batch {
+		if row.LobType != lobType {
+			return fmt.Errorf(
+				"mixed lob types in batch %d at position %d: %q vs %q",
+				batchIndex, i, lobType, row.LobType,
+			)
+		}
+		if row.LobBytes < 0 {
+			return fmt.Errorf("negative lob size in batch %d at row %d", batchIndex, row.RowIndex)
+		}
+	}
 
 	return nil
 }

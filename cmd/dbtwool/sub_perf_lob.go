@@ -63,22 +63,36 @@ func lobGenCommand() *cobra.Command {
 		Long:  "Use this command to generate data to test with.",
 		Run: func(_ *cobra.Command, _ []string) {
 			schema, table, err := parseSchemaTable(genArgs.GetString(ArgTable))
-
 			if err == nil {
+				useBulkInsertion := genArgs.GetBool(ArgBulkInsert)
 				params := db2.NewDB2ConnparamsFromEnv()
 				db2Client := db2.NewClient(params)
 
-				lobperformance.Generate(
-					context.Background(),
-					dbclient.DB2,
-					&db2Client,
-					schema,
-					table,
-					genArgs.GetStringSlice(ArgSpread),
-					int64(genArgs.GetUint(ArgEmptyLobs)),
-					genArgs.GetString(ArgByteSize),
-					int(genArgs.GetUint(ArgBatchSize)),
-					genArgs.GetString(ArgLobType))
+				if useBulkInsertion {
+					lobperformance.GenerateBulk(
+						context.Background(),
+						dbclient.DB2,
+						&db2Client,
+						schema,
+						table,
+						genArgs.GetStringSlice(ArgSpread),
+						int64(genArgs.GetUint(ArgEmptyLobs)),
+						genArgs.GetString(ArgByteSize),
+						int(genArgs.GetUint(ArgBatchSize)),
+						genArgs.GetString(ArgLobType))
+				} else {
+					lobperformance.Generate(
+						context.Background(),
+						dbclient.DB2,
+						&db2Client,
+						schema,
+						table,
+						genArgs.GetStringSlice(ArgSpread),
+						int64(genArgs.GetUint(ArgEmptyLobs)),
+						genArgs.GetString(ArgByteSize),
+						int(genArgs.GetUint(ArgBatchSize)),
+						genArgs.GetString(ArgLobType))
+				}
 			} else {
 				fmt.Printf("An error occurred while parsing the schema + table: %v", err)
 			}

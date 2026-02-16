@@ -8,7 +8,12 @@ import (
 	"github.com/pgvillage-tools/dbtwool/pkg/dbinterface"
 )
 
-func (c *Connection) InsertLOBRowsBulk(ctx context.Context, schema, table string, rows []dbinterface.LobRow) (int64, int64, error) {
+// InsertLOBRowsBulk uses PostgreSQL's COPY to insert large objects in bulk
+func (c *Connection) InsertLOBRowsBulk(
+	ctx context.Context,
+	schema,
+	table string,
+	rows []dbinterface.LobRow) (int64, int64, error) {
 	if len(rows) == 0 {
 		return 0, 0, nil
 	}
@@ -50,6 +55,7 @@ type pgLobRowSource struct {
 	i    int
 }
 
+// Next returns true if there is a next row.
 func (s *pgLobRowSource) Next() bool { return s.i < len(s.rows) }
 
 func (s *pgLobRowSource) Values() ([]any, error) {
@@ -71,6 +77,7 @@ func (s *pgLobRowSource) Values() ([]any, error) {
 	return []any{r.TenantID, r.DocType, bin, txt}, nil
 }
 
+// Err is a not yet implemented function
 func (s *pgLobRowSource) Err() error { return nil }
 
 func calculateTotalBytes(rows []dbinterface.LobRow) (int64, error) {
@@ -90,5 +97,4 @@ func calculateTotalBytes(rows []dbinterface.LobRow) (int64, error) {
 	}
 
 	return totalBytes, err
-
 }
