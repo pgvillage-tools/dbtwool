@@ -37,6 +37,6 @@ func ConnParamsFromEnv() ConnParams {
 		Database: utils.GetEnv("PGDATABASE", "postgres"),
 		User:     utils.GetEnv("PGUSER", "postgres"),
 		Password: utils.GetEnv("PGPASSWORD", "postgres"),
-		SslMode:  "disable",
+		SslMode:  utils.GetEnv("PGSSLMODE", "allow"),
 	}
 }

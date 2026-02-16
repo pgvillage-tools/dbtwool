@@ -12,7 +12,7 @@ import (
 // Connection is a wrapper over sql.Conn, so that we can add methods
 type Connection struct {
 	conn *pgx.Conn
-	tx   *pgx.Tx
+	tx   pgx.Tx
 }
 
 // Close closes the connection
@@ -29,20 +29,33 @@ func (c *Connection) SetIsolationLevel(ctx context.Context, isoLevel dbinterface
 }
 
 // Execute will execute a query and return number of affected rows
-func (c *Connection) Execute(ctx context.Context, query string) (int64, error) {
-	r, err := c.conn.Exec(ctx, query)
+func (c *Connection) Execute(ctx context.Context, sql string) (int64, error) {
+	if c.tx == nil {
+		return 0, errors.New("Execute requires an active transaction; call Begin() first")
+	}
+	ct, err := c.tx.Exec(ctx, sql)
 	if err != nil {
 		return 0, err
 	}
-	return r.RowsAffected(), nil
+	return ct.RowsAffected(), nil
 }
 
 // Query will execute a query and return a list of maps where every list item is a row and every map item is a column
 func (c *Connection) Query(ctx context.Context, query string, args ...any) ([]map[string]any, error) {
-	rows, err := c.conn.Query(ctx, query, args...)
+	var (
+		rows pgx.Rows
+		err  error
+	)
+
+	if c.tx != nil {
+		rows, err = c.tx.Query(ctx, query, args...)
+	} else {
+		rows, err = c.conn.Query(ctx, query, args...)
+	}
 	if err != nil {
 		return nil, err
 	}
+
 	return rowsToMaps(rows)
 }
 
@@ -63,36 +76,35 @@ func (c *Connection) QueryOneRow(ctx context.Context, query string, args ...any)
 
 // Begin starts a transaction. In this case there is a one-on-one relation between the transaction and the connection
 func (c *Connection) Begin(ctx context.Context) error {
+	if c.tx != nil {
+		return errors.New("transaction already active")
+	}
 	tx, err := c.conn.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	c.tx = &tx
+	c.tx = tx
 	return nil
 }
 
 // Commit will commit the connection
 func (c *Connection) Commit(ctx context.Context) error {
-	if c.tx != nil {
-		tx := *c.tx
-		if err := tx.Commit(ctx); err != nil {
-			return err
-		}
-		c.tx = nil
+	if c.tx == nil {
+		return errors.New("no active transaction")
 	}
-	return nil
+	err := c.tx.Commit(ctx)
+	c.tx = nil
+	return err
 }
 
 // Rollback will rollback the transaction
 func (c *Connection) Rollback(ctx context.Context) error {
-	if c.tx != nil {
-		tx := *c.tx
-		if err := tx.Rollback(ctx); err != nil {
-			return err
-		}
-		c.tx = nil
+	if c.tx == nil {
+		return errors.New("no active transaction")
 	}
-	return nil
+	err := c.tx.Rollback(ctx)
+	c.tx = nil
+	return err
 }
 
 // ExecuteWithPayload executes a query with  payload
@@ -105,7 +117,7 @@ func (c *Connection) ExecuteWithPayload(ctx context.Context, sql string, payload
 	allArgs = append(allArgs, args...)
 	allArgs = append(allArgs, payload)
 
-	ct, err := c.conn.Exec(ctx, sql, allArgs...)
+	ct, err := c.tx.Exec(ctx, sql, allArgs...)
 	if err != nil {
 		return 0, err
 	}

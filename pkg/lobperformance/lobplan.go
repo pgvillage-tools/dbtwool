@@ -119,14 +119,14 @@ func BuildLOBPlan(totalBytes int64, lobType string, buckets []SpreadBucket,
 	var idx int64
 	for _, a := range allocs {
 		for i := int64(0); i < a.rows; i++ {
-			plan = append(plan, LOBRowPlan{RowIndex: idx, LobType: lobType, LobBytes: a.size})
+			plan = append(plan, LOBRowPlan{RowIndex: idx, LobType: lobType, LobBytes: a.size, DocType: "bin"})
 			idx++
 		}
 	}
 
 	// Append empty LOB rows
 	for range emptyLobs {
-		plan = append(plan, LOBRowPlan{RowIndex: idx, LobType: lobType, LobBytes: 0})
+		plan = append(plan, LOBRowPlan{RowIndex: idx, LobType: lobType, LobBytes: 0, DocType: "bin"})
 		idx++
 	}
 

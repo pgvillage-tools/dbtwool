@@ -18,6 +18,7 @@ const (
 	decimalSystem        = 10
 	bitSize64            = 64
 	maxPercent           = 100
+	maxPercentFloat      = 100.0
 	defaultWarmupTime    = 10
 	defaultExecutionTime = 20
 )
