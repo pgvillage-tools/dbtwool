@@ -50,7 +50,7 @@ var _ = Describe("ConnParams", func() {
 			Expect(params.Database).To(Equal("postgres"))
 			Expect(params.User).To(Equal("postgres"))
 			Expect(params.Password).To(Equal("postgres"))
-			Expect(params.SslMode).To(Equal("disable"))
+			Expect(params.SslMode).To(Equal("allow"))
 		})
 
 		It("should use values from env vars when they are set", func() {
@@ -66,7 +66,7 @@ var _ = Describe("ConnParams", func() {
 			Expect(params.Database).To(Equal("testdb"))
 			Expect(params.User).To(Equal("testuser"))
 			Expect(params.Password).To(Equal("testpass"))
-			Expect(params.SslMode).To(Equal("disable"))
+			Expect(params.SslMode).To(Equal("allow"))
 		})
 	})
 })
