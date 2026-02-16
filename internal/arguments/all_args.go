@@ -6,6 +6,7 @@ const (
 	ArgIsolationLevel = "isolationLevel"
 	ArgSpread         = "spread"
 	ArgByteSize       = "byteSize"
+	ArgBatchSize      = "batchSize"
 	ArgLobType        = "lobType"
 	ArgEmptyLobs      = "emptyLobs"
 	ArgRandomizerSeed = "randomizerSeed"
@@ -15,6 +16,7 @@ const (
 	ArgExecutionTime  = "executionTime"
 	ArgReadMode       = "readMode"
 	ArgNumOfRows      = "numOfRows"
+	ArgBulkInsert     = "bulkInsert"
 )
 
 var (
@@ -28,6 +30,8 @@ var (
 			desc: `spread. By default everything is 8 bytes`},
 		ArgByteSize: {short: "b", defValue: "1kb", argType: typeString,
 			desc: `What the size of the datasource should be in b, kb, gb, etc.`},
+		ArgBatchSize: {short: "B", defValue: uint(50), argType: typeUInt,
+			desc: `Number of inserts in one batch transactions`},
 		ArgLobType: {short: "l", defValue: "blob", argType: typeString,
 			desc: `What type of large object. (BLOB, CLOB, JSONB, etc.)`},
 		ArgEmptyLobs: {short: "e", defValue: uint(0), argType: typeUInt,
@@ -46,5 +50,7 @@ var (
 			desc: `How the reading of LOBs is distributed. 'scattered' or 'sequential'. leave empty for scattered.`},
 		ArgNumOfRows: {short: "n", defValue: uint(10000000), argType: typeUInt,
 			desc: `How many rows to generate`},
+		ArgBulkInsert: {short: "u", defValue: false, argType: typeBool,
+			desc: `Use bulk insertion. (Not possible remotely with DB2. Execute on host.)`},
 	}
 )

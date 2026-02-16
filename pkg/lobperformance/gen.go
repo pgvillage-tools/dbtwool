@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/pgvillage-tools/dbtwool/pkg/dbclient"
 	"github.com/pgvillage-tools/dbtwool/pkg/dbinterface"
@@ -22,9 +23,8 @@ type LOBRowPlan struct {
 }
 
 // Generate generates LOB data
-func Generate(ctx context.Context, dbType dbclient.RDBMS, client dbinterface.Client,
-	schemaName string, tableName string, spread []string, emptyLobs int64, byteSize string,
-	lobType string) {
+func Generate(ctx context.Context, dbType dbclient.RDBMS, client dbinterface.Client, schemaName string,
+	tableName string, spread []string, emptyLobs int64, byteSize string, batchSize int, lobType string) {
 	var logger = log.With().Logger()
 	logger.Info().Msg("Initiating connection pool.")
 	pool, poolErr := client.Pool(ctx)
@@ -39,12 +39,7 @@ func Generate(ctx context.Context, dbType dbclient.RDBMS, client dbinterface.Cli
 	}
 	defer conn.Close(ctx)
 
-	var dbHelper DBHelper
-	if dbType == dbclient.DB2 {
-		dbHelper = DB2Helper{schemaName: schemaName, tableName: tableName}
-	} else {
-		dbHelper = PGHelper{schemaName: schemaName, tableName: tableName}
-	}
+	dbHelper := initDBHelper(dbType, schemaName, tableName)
 
 	// Interpret byte size
 	totalBytes, err := ParseByteSize(byteSize)
@@ -54,14 +49,7 @@ func Generate(ctx context.Context, dbType dbclient.RDBMS, client dbinterface.Cli
 
 	logger.Info().Msgf("Totalbytes set to %v", totalBytes)
 
-	var buckets []SpreadBucket
-	for _, s := range spread {
-		b, err := ParseSpread(s)
-		if err != nil {
-			logger.Fatal().Msgf("Cannot parse spread argument: %v", err)
-		}
-		buckets = append(buckets, b)
-	}
+	var buckets = createSpreadBuckets(spread)
 
 	logger.Info().Msg("Building LOB generation plan")
 	plan, err := BuildLOBPlan(totalBytes, lobType, buckets, int64(emptyLobs))
@@ -69,8 +57,8 @@ func Generate(ctx context.Context, dbType dbclient.RDBMS, client dbinterface.Cli
 		logger.Fatal().Msgf("Something went wrong building the LOB generation plan: %v", err)
 	}
 
-	logger.Info().Msgf("Building LOB generation plan finished. %v rows will be inserted.", len(plan))
-	const batchSize = 100
+	totalNumOfRows := len(plan)
+	logger.Info().Msgf("Building LOB generation plan finished. %v rows will be inserted.", totalNumOfRows)
 	logger.Info().Msgf("Batch size set to %v", batchSize)
 
 	insertSQL, err := dbHelper.CreateInsertLOBRowBaseSQL(lobType)
@@ -79,8 +67,8 @@ func Generate(ctx context.Context, dbType dbclient.RDBMS, client dbinterface.Cli
 	}
 	const randomSeed = 12345
 	idx := ShuffledIndices(len(plan), randomSeed)
-
 	total := len(idx)
+	startedAt := time.Now()
 
 	for start := 0; start < len(idx); start += batchSize {
 		end := min(start+batchSize, len(idx))
@@ -90,9 +78,18 @@ func Generate(ctx context.Context, dbType dbclient.RDBMS, client dbinterface.Cli
 			batch = append(batch, plan[k])
 		}
 
-		logger.Info().Msgf("Inserting LOBs %v to %v out of %v total", start+1, end, total)
-		err := processLobBatch(ctx, conn, batch, start/batchSize, insertSQL)
+		// "done" after this batch completes successfully
+		doneAfter := end
 
+		pct := progressPct(doneAfter, total)
+		eta := estimateRemaining(startedAt, doneAfter, total)
+
+		logger.Info().Msgf(
+			"Inserting LOBs %d to %d of %d (%.3f%%, ETA %s)",
+			start+1, end, totalNumOfRows, pct, eta.Truncate(time.Second),
+		)
+
+		err := processLobBatch(ctx, conn, batch, start/batchSize, insertSQL)
 		if err != nil {
 			logger.Fatal().Msgf("Something went wrong while processing the LOB batch %v", err)
 		}
@@ -110,25 +107,8 @@ func processLobBatch(
 		return nil
 	}
 
-	// Basic batch-level validation
-	lobType := batch[0].LobType
-	for i, row := range batch {
-		if row.LobType != lobType {
-			return fmt.Errorf(
-				"mixed lob types in batch %d at position %d: %q vs %q",
-				batchIndex,
-				i,
-				lobType,
-				row.LobType,
-			)
-		}
-		if row.LobBytes < 0 {
-			return fmt.Errorf(
-				"negative lob size in batch %d at row %d",
-				batchIndex,
-				row.RowIndex,
-			)
-		}
+	if err := validateBatch(batch, batchIndex); err != nil {
+		return err
 	}
 
 	// Begin one transaction for the entire batch
@@ -143,8 +123,21 @@ func processLobBatch(
 		}
 	}()
 
-	var rowsAltered int64
-	var totalBytes int64
+	var (
+		rowsAltered int64
+		totalBytes  int64
+	)
+
+	// Prefer prepared statement if available
+	var preparedStatement dbinterface.PreparedStatement
+	if tp, ok := any(conn).(dbinterface.TxPreparer); ok {
+		s, err := tp.PrepareInTx(ctx, insertSQL)
+		if err != nil {
+			return fmt.Errorf("prepare failed for batch %d: %w", batchIndex, err)
+		}
+		preparedStatement = s
+		defer func() { _ = preparedStatement.Close(ctx) }()
+	}
 
 	for _, row := range batch {
 		payload, err := createLobPayload(row.LobType, row.LobBytes)
@@ -152,7 +145,12 @@ func processLobBatch(
 			return fmt.Errorf("create payload failed for row_index=%d: %w", row.RowIndex, err)
 		}
 
-		ra, err := conn.ExecuteWithPayload(ctx, insertSQL, payload, row.TenantID, row.DocType)
+		var ra int64
+		if preparedStatement != nil {
+			ra, err = preparedStatement.ExecWithPayload(ctx, payload, row.TenantID, row.DocType)
+		} else {
+			ra, err = conn.ExecuteWithPayload(ctx, insertSQL, payload, row.TenantID, row.DocType)
+		}
 		if err != nil {
 			return fmt.Errorf("insert failed for row_index=%d: %w", row.RowIndex, err)
 		}
@@ -171,10 +169,39 @@ func processLobBatch(
 		Int("rows", len(batch)).
 		Int64("rows_altered", rowsAltered).
 		Int64("lob_bytes", totalBytes).
-		Str("lob_type", lobType).
 		Msg("Inserted LOB batch finished")
 
 	return nil
+}
+
+func validateBatch(batch []LOBRowPlan, batchIndex int) error {
+	lobType := batch[0].LobType
+	for i, row := range batch {
+		if row.LobType != lobType {
+			return fmt.Errorf(
+				"mixed lob types in batch %d at position %d: %q vs %q",
+				batchIndex, i, lobType, row.LobType,
+			)
+		}
+		if row.LobBytes < 0 {
+			return fmt.Errorf("negative lob size in batch %d at row %d", batchIndex, row.RowIndex)
+		}
+	}
+
+	return nil
+}
+
+func createSpreadBuckets(spread []string) []SpreadBucket {
+	var buckets []SpreadBucket
+	for _, s := range spread {
+		b, err := ParseSpread(s)
+		if err != nil {
+			logger.Fatal().Msgf("Cannot parse spread argument: %v", err)
+		}
+		buckets = append(buckets, b)
+	}
+
+	return buckets
 }
 
 func createLobPayload(lobType string, size int64) (any, error) {
@@ -250,4 +277,36 @@ func asciiEncodeInPlace(buf []byte) {
 	for i := range buf {
 		buf[i] = alphabet[buf[i]&alphabetMask]
 	}
+}
+
+func progressPct(done, total int) float64 {
+	if total <= 0 {
+		return maxPercentFloat
+	}
+	return (float64(done) / float64(total)) * maxPercentFloat
+}
+
+func estimateRemaining(start time.Time, done, total int) time.Duration {
+	if done <= 0 || total <= done {
+		return 0
+	}
+
+	elapsed := time.Since(start).Seconds()
+	rate := float64(done) / elapsed // rows per second
+
+	if rate <= 0 {
+		return 0
+	}
+
+	remaining := float64(total - done)
+	etaSeconds := remaining / rate
+
+	return time.Duration(etaSeconds * float64(time.Second))
+}
+
+func initDBHelper(dbType dbclient.RDBMS, schemaName, tableName string) DBHelper {
+	if dbType == dbclient.DB2 {
+		return DB2Helper{schemaName: schemaName, tableName: tableName}
+	}
+	return PGHelper{schemaName: schemaName, tableName: tableName}
 }

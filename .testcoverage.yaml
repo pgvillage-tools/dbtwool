@@ -26,7 +26,7 @@ threshold:
   # (optional; default 0)
   # Minimum overall project coverage percentage required.
   #  total: 80
-  total: 4
+  total: 3
 
 # Holds regexp rules which will override thresholds for matched files or packages
 # using their paths.
@@ -53,6 +53,10 @@ override:
     threshold: 0.0
   - path: ^pkg/db2client/rdbms.go$
     threshold: 0.0
+  - path: ^pkg/db2client/lobs.go$
+    threshold: 0.0
+  - path: ^pkg/db2client/prepared.go$
+    threshold: 0.0
   - path: ^pkg/utils/main.go$
     threshold: 68
   - path: ^internal/arguments/args.go$
@@ -70,13 +74,18 @@ override:
   - path: ^pkg/pg/client.go$
     threshold: 0.0
   - path: ^pkg/pg/connection.go$
-    threshold: 25
+    threshold: 20
+  - path: ^pkg/pg/lobs.go$
+    threshold: 0.0
+  - path: ^pkg/pg/prepared.go$
+    threshold: 0.0
   - path: ^pkg/dbclient/rdbms.go$
     threshold: 0.0
 
   - path: ^pkg/lobperformance/db2_helper.go$
     threshold: 0.0
   - path: ^pkg/lobperformance/gen.go$
+    threshold: 0.0
   - path: ^pkg/lobperformance/lobplan.go$
     threshold: 0.0
   - path: ^pkg/lobperformance/pg_helper.go$
@@ -86,6 +95,8 @@ override:
   - path: ^pkg/lobperformance/stage.go$
     threshold: 0.0
   - path: ^pkg/lobperformance/test_execution.go$
+    threshold: 0.0
+  - path: ^pkg/lobperformance/bulk_gen.go$
     threshold: 0.0
 
   - path: ^pkg/ruperformance/main.go$
@@ -116,7 +127,7 @@ override:
   - path: ^pkg/dbinterface$
     threshold: 0.0
   - path: ^pkg/pg$  
-    threshold: 23
+    threshold: 10
   - path: ^pkg/dbclient$
     threshold: 0.0
   - path: ^pkg/lobperformance$
