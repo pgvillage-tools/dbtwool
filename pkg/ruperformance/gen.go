@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 	"time"
 
@@ -13,6 +14,8 @@ import (
 	"github.com/pgvillage-tools/dbtwool/pkg/dbinterface"
 	"github.com/rs/zerolog/log"
 )
+
+const base10 = 10
 
 // AcctTxnRowPlan defines a record for acct_txn table row
 type AcctTxnRowPlan struct {
@@ -116,6 +119,8 @@ func buildInsertSQL(
 	sb.Grow((end - start) * stringBufferallocation)
 	sb.WriteString(insertPrefix)
 
+	var numBuf [20]byte
+
 	for i := start; i < end; i++ {
 		rowIdx := int64(i)
 
@@ -129,9 +134,20 @@ func buildInsertSQL(
 		descrLit := sqlStringLiteral(descr)
 
 		if i > start {
-			sb.WriteString(",")
+			sb.WriteByte(',')
 		}
-		sb.WriteString(fmt.Sprintf("(%d, %s, %s, %s)", acctID, tsLit, amtLit, descrLit))
+
+		sb.WriteByte('(')
+
+		sb.Write(strconv.AppendInt(numBuf[:0], int64(acctID), base10))
+
+		sb.WriteString(", ")
+		sb.WriteString(tsLit)
+		sb.WriteString(", ")
+		sb.WriteString(amtLit)
+		sb.WriteString(", ")
+		sb.WriteString(descrLit)
+		sb.WriteByte(')')
 	}
 
 	return sb.String()
