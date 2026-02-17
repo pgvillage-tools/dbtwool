@@ -131,7 +131,7 @@ func buildInsertSQL(
 		if i > start {
 			sb.WriteString(",")
 		}
-		sb.WriteString(fmt.Sprintf("(%d, %s, %s, %s)", acctID, tsLit, amtLit, descrLit))
+		logger.Info().Msgf("InsertSQL: (%d, %s, %s, %s)", acctID, tsLit, amtLit, descrLit)
 	}
 
 	return sb.String()
