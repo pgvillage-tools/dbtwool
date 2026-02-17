@@ -204,7 +204,7 @@ func runReaders(
 	if firstErr := collectFirstError(errCh, parallel); firstErr != nil {
 		return time.Time{}, 0, firstErr
 	}
-	return resolveStartTime(startTime, executionTime), readCount.Load(), nil
+	return resolveStartTime(&startTime, executionTime), readCount.Load(), nil
 }
 
 func openWorkerConns(
@@ -316,7 +316,7 @@ func collectFirstError(errCh <-chan error, parallel int) error {
 	return firstErr
 }
 
-func resolveStartTime(startTime atomic.Value, executionTime int) time.Time {
+func resolveStartTime(startTime *atomic.Value, executionTime int) time.Time {
 	if stAny := startTime.Load(); stAny != nil {
 		if st, ok := stAny.(time.Time); ok {
 			return st

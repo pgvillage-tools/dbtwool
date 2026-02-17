@@ -30,17 +30,13 @@ func (c *Connection) Close(ctx context.Context) error {
 func (c *Connection) SetIsolationLevel(ctx context.Context, isoLevel dbinterface.IsolationLevel) error {
 	qryIsoLevel := isoLevel.AsQuery()
 	logger.Info().Msgf("Set Isolation level: %s", qryIsoLevel)
-
 	if err := c.Begin(ctx); err != nil {
 		return err
 	}
-
-	_, err := c.Execute(ctx, qryIsoLevel)
-
-	if err := c.Commit(ctx); err != nil {
+	if _, err := c.Execute(ctx, qryIsoLevel); err != nil {
 		return err
 	}
-	return err
+	return c.Commit(ctx)
 }
 
 // Execute will execute a query and return number of affected rows
