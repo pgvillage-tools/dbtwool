@@ -20,7 +20,8 @@ var _ = Describe("ConnParams", func() {
 				Password: "mypassword",
 				SslMode:  "disable",
 			}
-			expected := "host=myhost port=5432 dbname=mydb user=myuser password=mypassword sslmode=disable"
+			expected := "host=myhost port=5432 dbname=mydb user=myuser password=mypassword sslmode=disable" +
+				" application_name=pgtwool"
 			Expect(params.GetConnString()).To(Equal(expected))
 		})
 	})

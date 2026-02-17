@@ -6,26 +6,37 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pgvillage-tools/dbtwool/pkg/dbinterface"
 )
 
 // Connection is a wrapper over sql.Conn, so that we can add methods
 type Connection struct {
-	conn *pgx.Conn
-	tx   pgx.Tx
+	pconn *pgxpool.Conn
+	tx    pgx.Tx
 }
 
 // Close closes the connection
 func (c *Connection) Close(ctx context.Context) error {
-	return c.conn.Close(ctx)
+	if c.tx != nil {
+		_ = c.tx.Rollback(ctx)
+		c.tx = nil
+	}
+	c.pconn.Release()
+	return nil
 }
 
 // SetIsolationLevel can be used to change the isolation level on a connection
 func (c *Connection) SetIsolationLevel(ctx context.Context, isoLevel dbinterface.IsolationLevel) error {
 	qryIsoLevel := isoLevel.AsQuery()
 	logger.Info().Msgf("Set Isolation level: %s", qryIsoLevel)
-	_, err := c.Execute(ctx, qryIsoLevel)
-	return err
+	if err := c.Begin(ctx); err != nil {
+		return err
+	}
+	if _, err := c.Execute(ctx, qryIsoLevel); err != nil {
+		return err
+	}
+	return c.Commit(ctx)
 }
 
 // Execute will execute a query and return number of affected rows
@@ -50,12 +61,11 @@ func (c *Connection) Query(ctx context.Context, query string, args ...any) ([]ma
 	if c.tx != nil {
 		rows, err = c.tx.Query(ctx, query, args...)
 	} else {
-		rows, err = c.conn.Query(ctx, query, args...)
+		rows, err = c.pconn.Conn().Query(ctx, query, args...)
 	}
 	if err != nil {
 		return nil, err
 	}
-
 	return rowsToMaps(rows)
 }
 
@@ -79,7 +89,7 @@ func (c *Connection) Begin(ctx context.Context) error {
 	if c.tx != nil {
 		return errors.New("transaction already active")
 	}
-	tx, err := c.conn.Begin(ctx)
+	tx, err := c.pconn.Conn().Begin(ctx)
 	if err != nil {
 		return err
 	}

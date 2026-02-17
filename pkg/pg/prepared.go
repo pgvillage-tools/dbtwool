@@ -42,7 +42,7 @@ func (c *Connection) PrepareInTx(ctx context.Context, sqlText string) (dbinterfa
 	// Name should be stable per connection+SQL.
 	name := stmtNameForSQL(sqlText)
 
-	_, err := c.conn.Prepare(ctx, name, sqlText)
+	_, err := c.tx.Prepare(ctx, name, sqlText)
 	if err != nil {
 		return nil, err
 	}
