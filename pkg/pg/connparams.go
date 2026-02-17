@@ -19,7 +19,7 @@ type ConnParams struct {
 // GetConnString builds and returns a string that can be used to connect to PostgreSQL
 func (cp ConnParams) GetConnString() string {
 	return fmt.Sprintf(
-		"host=%s port=%s dbname=%s user=%s password=%s sslmode=%s",
+		"host=%s port=%s dbname=%s user=%s password=%s sslmode=%s application_name=pgtwool",
 		cp.Host,
 		cp.Port,
 		cp.Database,

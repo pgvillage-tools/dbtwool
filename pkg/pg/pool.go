@@ -19,12 +19,11 @@ type Pool struct {
 
 // Connect will create and return a new connection in the pool
 func (p Pool) Connect(ctx context.Context) (dbinterface.Connection, error) {
-	conn, err := p.pool.Acquire(ctx)
+	pconn, err := p.pool.Acquire(ctx)
 	if err != nil {
 		return nil, err
 	}
-	pgConn := &Connection{conn: conn.Conn()}
-	return pgConn, nil
+	return &Connection{pconn: pconn}, nil
 }
 
 func (p Pool) validate(ctx context.Context) error {
@@ -34,8 +33,10 @@ func (p Pool) validate(ctx context.Context) error {
 	if err := p.pool.Ping(ctx); err != nil {
 		return err
 	}
-	if _, err := p.pool.Query(ctx, pgTestQuery); err != nil {
+	rows, err := p.pool.Query(ctx, pgTestQuery)
+	if err != nil {
 		return err
 	}
+	rows.Close()
 	return nil
 }

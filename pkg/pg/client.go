@@ -24,12 +24,21 @@ func NewClient(connectionParams ConnParams) Client {
 // Pool will connect to PostgreSQL and return a new PostgreSQL pool
 func (cl *Client) Pool(ctx context.Context) (dbinterface.Pool, error) {
 	if cl.pool == nil {
-		pool, err := pgxpool.New(ctx, cl.ConnectParams.GetConnString())
+		cfg, err := pgxpool.ParseConfig(cl.ConnectParams.GetConnString())
 		if err != nil {
 			return Pool{}, err
 		}
-		cl.pool = &Pool{pool: pool}
+
+		cfg.MaxConns = maxPoolSizeDefault
+		cfg.MinConns = minPoolSizeDefault
+
+		p, err := pgxpool.NewWithConfig(ctx, cfg)
+		if err != nil {
+			return Pool{}, err
+		}
+		cl.pool = &Pool{pool: p}
 	}
+
 	if err := cl.pool.validate(ctx); err != nil {
 		cl.pool = nil
 		return Pool{}, err

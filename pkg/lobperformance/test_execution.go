@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -62,7 +61,6 @@ func ExecuteTest(
 	if err != nil {
 		return fmt.Errorf("failed to connect for metadata query: %w", err)
 	}
-	defer metaConn.Close(ctx)
 
 	minID, maxID, err := fetchMinMaxIDs(ctx, metaConn, dbHelper)
 	if err != nil {
@@ -73,6 +71,8 @@ func ExecuteTest(
 	if err != nil {
 		return err
 	}
+
+	metaConn.Close(ctx)
 
 	logger.Info().Msgf("Starting read test with parallel=%d (max_id=%d)", parallel, maxID)
 
@@ -168,77 +168,161 @@ func runReaders(
 	warmupTime int,
 	executionTime int,
 ) (time.Time, int64, error) {
-	// Warmup ctx
-	warmupCtx, cancelWarmup := context.WithTimeout(parent, time.Duration(warmupTime)*time.Second)
-	defer cancelWarmup()
-
-	// Total ctx
-	totalCtx, cancelTotal := context.WithTimeout(parent, time.Duration(warmupTime+executionTime)*time.Second)
-	defer cancelTotal()
-
-	rg, err := NewRandGenerator(minID, maxID, RandMode(readMode), rngSeed)
+	logger.Info().Msgf("Acquiring %v connections from pool.", parallel)
+	conns, err := openWorkerConns(parent, pool, parallel, 60*time.Second)
 	if err != nil {
 		return time.Time{}, 0, err
 	}
-	safeRng := NewSafeRandGenerator(rg)
+	defer closeAll(parent, conns)
+
+	logger.Info().Msg("Acquiring connections finished.")
+
+	warmupCtx, totalCtx, cancel := makeWarmupAndTotalContexts(parent, warmupTime, executionTime)
+	defer cancel()
+
+	safeRng, err := buildSafeRng(minID, maxID, readMode, rngSeed)
+	if err != nil {
+		return time.Time{}, 0, err
+	}
 
 	var measuring atomic.Int32
 	var readCount atomic.Int64
-	var startTime time.Time
-	var startOnce sync.Once
+	var startTime atomic.Value // stores time.Time
 
-	worker := func(workerID int) error {
-		conn, err := pool.Connect(totalCtx)
-		if err != nil {
-			return fmt.Errorf("worker %d connect failed: %w", workerID, err)
-		}
-		defer conn.Close(totalCtx)
-
-		for {
-			if err := totalCtx.Err(); err != nil {
-				return nil
-			}
-			id := safeRng.NextRand()
-			row, qErr := conn.QueryOneRow(totalCtx, readSQL, int64(id))
-			if qErr != nil {
-				if totalCtx.Err() != nil {
-					return nil
-				}
-				return fmt.Errorf("worker %d read failed (id=%d): %w", workerID, id, qErr)
-			}
-			v, ok := row[col]
-			if !ok {
-				return fmt.Errorf("worker %d: column %q not found in result", workerID, col)
-			}
-			touchValue(v)
-			if measuring.Load() == 1 {
-				readCount.Add(1)
-				startOnce.Do(func() { startTime = time.Now() })
-			}
-		}
-	}
-
-	errCh := make(chan error, parallel)
-	for i := 0; i < parallel; i++ {
-		workerID := i
-		go func() { errCh <- worker(workerID) }()
-	}
+	logger.Info().Msg("Starting workers.")
+	errCh := startWorkers(parallel, conns, func(workerID int, conn dbinterface.Connection) error {
+		return readerWorkerLoop(totalCtx, workerID, conn, safeRng, readSQL, col, &measuring, &readCount)
+	})
 
 	<-warmupCtx.Done()
+	logger.Info().Msg("Warmup finished. Starting measurements.")
 	measuring.Store(1)
+	startTime.Store(time.Now())
 
 	<-totalCtx.Done()
 
+	if firstErr := collectFirstError(errCh, parallel); firstErr != nil {
+		return time.Time{}, 0, firstErr
+	}
+	return resolveStartTime(startTime, executionTime), readCount.Load(), nil
+}
+
+func openWorkerConns(
+	parent context.Context,
+	pool dbinterface.Pool,
+	parallel int,
+	timeout time.Duration,
+) ([]dbinterface.Connection, error) {
+	conns := make([]dbinterface.Connection, 0, parallel)
+	for i := 0; i < parallel; i++ {
+		connectCtx, cancel := context.WithTimeout(parent, timeout)
+		conn, err := pool.Connect(connectCtx)
+		cancel()
+		if err != nil {
+			closeAll(parent, conns)
+			return nil, fmt.Errorf("worker %d connect failed: %w", i, err)
+		}
+		conns = append(conns, conn)
+	}
+	return conns, nil
+}
+
+func closeAll(ctx context.Context, conns []dbinterface.Connection) {
+	for _, c := range conns {
+		_ = c.Close(ctx)
+	}
+}
+
+func makeWarmupAndTotalContexts(
+	parent context.Context,
+	warmupTime int,
+	executionTime int,
+) (context.Context, context.Context, func()) {
+	warmupCtx, cancelWarmup := context.WithTimeout(parent, time.Duration(warmupTime)*time.Second)
+	totalCtx, cancelTotal := context.WithTimeout(parent, time.Duration(warmupTime+executionTime)*time.Second)
+
+	cancel := func() {
+		cancelWarmup()
+		cancelTotal()
+	}
+	return warmupCtx, totalCtx, cancel
+}
+
+func buildSafeRng(minID, maxID int, readMode string, rngSeed int64) (*SafeRandGenerator, error) {
+	rg, err := NewRandGenerator(minID, maxID, RandMode(readMode), rngSeed)
+	if err != nil {
+		return nil, err
+	}
+	return NewSafeRandGenerator(rg), nil
+}
+
+func startWorkers(
+	parallel int,
+	conns []dbinterface.Connection,
+	fn func(workerID int, conn dbinterface.Connection) error,
+) <-chan error {
+	errCh := make(chan error, parallel)
+	for i := 0; i < parallel; i++ {
+		workerID := i
+		conn := conns[i]
+		go func() { errCh <- fn(workerID, conn) }()
+	}
+	return errCh
+}
+
+func readerWorkerLoop(
+	ctx context.Context,
+	workerID int,
+	conn dbinterface.Connection,
+	safeRng *SafeRandGenerator,
+	readSQL string,
+	col string,
+	measuring *atomic.Int32,
+	readCount *atomic.Int64,
+) error {
+	for {
+		if ctx.Err() != nil {
+			return nil
+		}
+
+		id := safeRng.NextRand()
+		row, qErr := conn.QueryOneRow(ctx, readSQL, int64(id))
+		if qErr != nil {
+			if ctx.Err() != nil {
+				return nil
+			}
+			return fmt.Errorf("worker %d read failed (id=%d): %w", workerID, id, qErr)
+		}
+
+		v, ok := row[col]
+		if !ok {
+			return fmt.Errorf("worker %d: column %q not found in result", workerID, col)
+		}
+
+		touchValue(v)
+		if measuring.Load() == 1 {
+			readCount.Add(1)
+		}
+	}
+}
+
+func collectFirstError(errCh <-chan error, parallel int) error {
 	var firstErr error
 	for i := 0; i < parallel; i++ {
 		if wErr := <-errCh; wErr != nil && firstErr == nil {
 			firstErr = wErr
 		}
 	}
-	if firstErr != nil {
-		return time.Time{}, 0, firstErr
+	return firstErr
+}
+
+func resolveStartTime(startTime atomic.Value, executionTime int) time.Time {
+	if stAny := startTime.Load(); stAny != nil {
+		if st, ok := stAny.(time.Time); ok {
+			return st
+		}
 	}
-	return startTime, readCount.Load(), nil
+	return time.Now().Add(-time.Duration(executionTime) * time.Second)
 }
 
 func touchValue(v any) {
