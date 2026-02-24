@@ -40,7 +40,7 @@ jobs:
           echo "LD_LIBRARY_PATH=$IBM_DB_HOME/lib" >> $GITHUB_ENV
 
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
+        uses: goreleaser/goreleaser-action@v7
         with:
           distribution: goreleaser
           version: '~> v2'
