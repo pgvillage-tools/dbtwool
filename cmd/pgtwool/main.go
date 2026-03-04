@@ -57,11 +57,11 @@ func createApp() *cobra.Command {
 	// var appArgs args
 	cobra.OnInitialize(initConfig)
 	rootCmd := &cobra.Command{
-		Use:   "dbtwool",
+		Use:   "pgtwool",
 		Short: "Run tests against DB2 and PostgreSQL",
 		Long: strings.Join([]string{
-			`dbtwool can be used to generate testdata and run tests against",
-			"PostgreSQL and DB2`}, " "),
+			`pgtwool can be used to generate testdata and run tests against",
+			"PostgreSQL`}, " "),
 		RunE:              requireSubcommand,
 		CompletionOptions: cobra.CompletionOptions{},
 		TraverseChildren:  true,
@@ -73,7 +73,7 @@ func createApp() *cobra.Command {
 	viper.AddConfigPath(viper.GetString("cfgFile"))
 	err := viper.ReadInConfig()
 	if err == nil {
-		fmt.Printf("dbtwool is reading config from this config file: %s", viper.ConfigFileUsed())
+		fmt.Printf("pgtwool is reading config from this config file: %s", viper.ConfigFileUsed())
 	}
 
 	rootCmd.AddCommand(
@@ -109,7 +109,7 @@ func initConfig() {
 		// Search config in home directory with name ".cobra" (without extension).
 		viper.AddConfigPath(home)
 		viper.SetConfigType("yaml")
-		viper.SetConfigName(".dbtwool")
+		viper.SetConfigName(".pgtwool")
 	}
 
 	viper.AutomaticEnv()
