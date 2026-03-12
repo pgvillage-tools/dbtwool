@@ -43,7 +43,7 @@ jobs:
             type=sha
 
       - name: Build and push images
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./Dockerfile.pg
@@ -90,7 +90,7 @@ jobs:
             type=sha
 
       - name: Build and push dbtwool images
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./Dockerfile.db2
