@@ -49,14 +49,14 @@ jobs:
             {{end}}
 
       - name: Add SBOM to release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             sources_${{ matrix.goos }}_${{ matrix.goarch }}.sbom.xml
 
       - name: Add LICENSES.md to release
         if: ${{ matrix.goarch == 'amd64' && matrix.goos == 'linux' }}
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             LICENSES.md
