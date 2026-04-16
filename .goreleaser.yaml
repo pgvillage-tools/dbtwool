@@ -50,9 +50,9 @@ builds:
       - -s -w -X "github.com/pgvillage-tools/dbtwool/internal/version.appVersion={{.Version}}"
 
 archives:
-  - format_overrides:
-      - formats: 
-        - tar.gz
+  - formats:
+      - tar.gz
+    format_overrides:
       - goos: windows
         formats: 
         - zip
