@@ -4,6 +4,9 @@ on:
     types:
       - published
 
+env:
+  # Golang version to use across CI steps
+  GOLANG_VERSION: ${{ env.GOLANG_VERSION }}
 jobs:
   binaries:
     runs-on: ubuntu-latest
