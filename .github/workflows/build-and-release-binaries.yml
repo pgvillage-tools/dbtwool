@@ -6,7 +6,7 @@ on:
 
 env:
   # Golang version to use across CI steps
-  GOLANG_VERSION: ${{ env.GOLANG_VERSION }}
+  GOLANG_VERSION: '1.26'
 jobs:
   binaries:
     runs-on: ubuntu-latest
@@ -20,6 +20,8 @@ jobs:
 
       - name: Set up Go
         uses: actions/setup-go@v6.4.0
+        with:
+          go-version: ${{ env.GOLANG_VERSION }}
 
       - name: Download cyclonedx-gomod
         uses: CycloneDX/gh-gomod-generate-sbom@v2
