@@ -7,7 +7,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/docker/go-connections/nat"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/testcontainers/testcontainers-go"
@@ -112,7 +111,7 @@ var _ = Describe("Smoke", Ordered, func() {
 	Context("when connecting to Postgres", func() {
 		It("should work properly", func() {
 			natPort, err := pgCnt.MappedPort(ctx,
-				nat.Port(fmt.Sprintf("%d/tcp", pgPort)))
+				fmt.Sprintf("%d/tcp", pgPort))
 			Ω(err).NotTo(HaveOccurred())
 			pgConnSettings := pgConn.setParam("port", natPort.Port())
 			// This does not work directly after starting the container but does after 5s.
