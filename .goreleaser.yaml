@@ -50,12 +50,14 @@ builds:
       - -s -w -X "github.com/pgvillage-tools/dbtwool/internal/version.appVersion={{.Version}}"
 
 archives:
-  - format: tar.gz
-    name_template: '{{ .Binary }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ with .Arm }}v{{ . }}{{ end }}{{ with .Mips }}_{{ . }}{{ end }}{{ if not (eq .Amd64 "v1") }}{{ .Amd64 }}{{ end }}'
-    # use zip for windows archives
+  - formats:
+      - tar.gz
     format_overrides:
       - goos: windows
-        format: zip
+        formats: 
+        - zip
+    name_template: '{{ .Binary }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ with .Arm }}v{{ . }}{{ end }}{{ with .Mips }}_{{ . }}{{ end }}{{ if not (eq .Amd64 "v1") }}{{ .Amd64 }}{{ end }}'
+
 
 changelog:
   sort: asc
