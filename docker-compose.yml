@@ -25,7 +25,20 @@ services:
       - ./:/host
     command: /scripts/build_rpm.sh
   postgres:
-    build:
-      context: docker/postgres
+    image: postgres
+    ports:
+      - 5432
     environment:
-      LD_LIBRARY_PATH: /opt/ibm/db2/V12.1/lib64
+      POSTGRES_PASSWORD: postgres
+  pgtwool:
+    build:
+      context: .
+      dockerfile: Dockerfile.pg
+    environment:
+      PGPASSWORD: postgres
+      PGHOST: postgres
+      PGUSER: postgres
+    # command: ru-performance stage
+    # command: ru-performance gen &&
+    command: ru-performance test --executionTime 300 --warmupTime 20 --isolationLevel 0
+    

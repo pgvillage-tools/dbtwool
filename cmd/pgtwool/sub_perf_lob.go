@@ -165,5 +165,5 @@ func parseSchemaTable(fullName string) (schema string, table string, err error) 
 
 		return schema, table, nil
 	}
-	return "dbtwooltests", fullName, nil
+	return "pgtwooltests", fullName, nil
 }
