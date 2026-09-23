@@ -66,6 +66,10 @@ func (m *mockRows) RawValues() [][]byte {
 	return nil
 }
 
+func (m *mockRows) TypeMap() *pgtype.Map {
+	return pgtype.NewMap()
+}
+
 func (m *mockRows) Scan(_ ...any) error {
 	return nil
 }
