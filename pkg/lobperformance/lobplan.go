@@ -12,6 +12,11 @@ import (
 	"time"
 )
 
+const (
+	percentageTotal = 100.0
+	roundingOffset  = 0.5
+)
+
 // SpreadBucket defines a bcket for a spread for LOB data size
 type SpreadBucket struct {
 	Percent float64 // e.g. 30.0
@@ -48,7 +53,7 @@ func verifyBuildLOBPlan(totalBytes int64, lobType string, buckets []SpreadBucket
 		sumPct += b.Percent
 	}
 	const superSmallFloat = 0.0001
-	if math.Abs(sumPct-100.0) > superSmallFloat {
+	if math.Abs(sumPct-percentageTotal) > superSmallFloat {
 		return nil, fmt.Errorf("spreads must sum to 100%%, got %.4f%%", sumPct)
 	}
 	return nil, nil
@@ -75,7 +80,7 @@ func BuildLOBPlan(totalBytes int64, lobType string, buckets []SpreadBucket,
 
 	var assigned int64
 	for i, b := range buckets {
-		target := int64(math.Round((b.Percent / 100.0) * float64(totalBytes)))
+		target := int64(math.Round((b.Percent / percentageTotal) * float64(totalBytes)))
 		if i == len(buckets)-1 {
 			target = totalBytes - assigned
 		}
@@ -225,5 +230,5 @@ func ParseByteSize(s string) (int64, error) {
 	if out > float64(math.MaxInt64) {
 		return 0, fmt.Errorf("size too large: %q", s)
 	}
-	return int64(out + 0.5), nil
+	return int64(out + roundingOffset), nil
 }
