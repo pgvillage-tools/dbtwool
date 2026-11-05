@@ -104,7 +104,7 @@ jobs:
 
   unit-test:
     name: Run unit tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ needs.codechanges.outputs.backend == 'true' || needs.codechanges.outputs.unittest == 'true'}}
     needs:
       - codechanges
