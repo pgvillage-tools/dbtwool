@@ -14,6 +14,8 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
+const containerStartupTimeout = 10 * time.Minute
+
 func containerLogs(ctx context.Context, cnt testcontainers.Container) (string, error) {
 	reader, err := cnt.Logs(ctx)
 	if err != nil {
@@ -73,7 +75,7 @@ func runDB2(
 				NetworkAliases:     aliasses,
 				WaitingFor: wait.ForLog(".*Setup has completed.*").
 					AsRegexp().
-					WithStartupTimeout(10 * time.Minute),
+					WithStartupTimeout(containerStartupTimeout),
 			},
 			Started: true,
 		})

@@ -14,6 +14,8 @@ import (
 	"github.com/pgvillage-tools/dbtwool/pkg/dbinterface"
 )
 
+const workerConnectionTimeout = 60 * time.Second
+
 // ExecuteTest executes the performance test
 func ExecuteTest(
 	ctx context.Context,
@@ -169,7 +171,7 @@ func runReaders(
 	executionTime int,
 ) (time.Time, int64, error) {
 	logger.Info().Msgf("Acquiring %v connections from pool.", parallel)
-	conns, err := openWorkerConns(parent, pool, parallel, 60*time.Second)
+	conns, err := openWorkerConns(parent, pool, parallel, workerConnectionTimeout)
 	if err != nil {
 		return time.Time{}, 0, err
 	}

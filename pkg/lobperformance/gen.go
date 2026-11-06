@@ -3,6 +3,7 @@ package lobperformance
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"strings"
@@ -12,6 +13,8 @@ import (
 	"github.com/pgvillage-tools/dbtwool/pkg/dbinterface"
 	"github.com/rs/zerolog/log"
 )
+
+const uint64ByteSize = 8
 
 // LOBRowPlan defines a record for a LOB table row
 type LOBRowPlan struct {
@@ -259,16 +262,9 @@ func encryptInPlace(buf []byte) {
 }
 
 func uint64ToBytes(v uint64) []byte {
-	return []byte{
-		byte(v >> 56),
-		byte(v >> 48),
-		byte(v >> 40),
-		byte(v >> 32),
-		byte(v >> 24),
-		byte(v >> 16),
-		byte(v >> 8),
-		byte(v),
-	}
+	b := make([]byte, uint64ByteSize)
+	binary.BigEndian.PutUint64(b, v)
+	return b
 }
 
 func asciiEncodeInPlace(buf []byte) {

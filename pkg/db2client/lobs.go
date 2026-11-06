@@ -16,8 +16,9 @@ import (
 )
 
 const (
-	defaultFilePerm = 0o640
-	tokenBytes      = 8
+	defaultFilePerm     = 0o640
+	tokenBytes          = 8
+	delWriterBufferSize = 1 << 20 // 1 MB
 )
 
 // InsertLOBRowsBulk writes files to the file system and executes LOAD commnands
@@ -124,7 +125,7 @@ func (b *lobLoadBatch) openFiles() error {
 
 	b.lf = lf
 	b.df = df
-	b.delW = bufio.NewWriterSize(df, 1<<20) // 1MB
+	b.delW = bufio.NewWriterSize(df, delWriterBufferSize)
 	return nil
 }
 

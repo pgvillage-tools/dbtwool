@@ -15,7 +15,12 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const base10 = 10
+const (
+	base10         = 10
+	percentageBase = 100
+	uint64ByteSize = 8
+	hashInputSize  = 3 * uint64ByteSize
+)
 
 // AcctTxnRowPlan defines a record for acct_txn table row
 type AcctTxnRowPlan struct {
@@ -172,7 +177,7 @@ func sqlStringLiteral(s string) string {
 // Makes most of the transactions be on the same 50 accounts so the RU permance scenario is recreated better. (hot data)
 func pickSkewedAcctID(seed uint64, rowIdx int64) int {
 	u := hashU64(seed, uint64(rowIdx), 0)
-	p := int(u % 100)
+	p := int(u % percentageBase)
 
 	if p < hotAccountPercentage {
 		return 1 + int(hashU64(seed, uint64(rowIdx), 1)%hotAccountCount)
@@ -213,25 +218,21 @@ func generateDescription(n int, seed uint64, rowIdx int64) string {
 
 // hashU64 returns a deterministic 64-bit value
 func hashU64(seed uint64, row uint64, salt uint64) uint64 {
-	var b [24]byte
-	binary.BigEndian.PutUint64(b[0:8], seed)
-	binary.BigEndian.PutUint64(b[8:16], row)
-	binary.BigEndian.PutUint64(b[16:24], salt)
+	var b [hashInputSize]byte
+
+	binary.BigEndian.PutUint64(b[:uint64ByteSize], seed)
+	binary.BigEndian.PutUint64(b[uint64ByteSize:2*uint64ByteSize], row)
+	binary.BigEndian.PutUint64(b[2*uint64ByteSize:], salt)
+
 	h := sha256.Sum256(b[:])
-	return binary.BigEndian.Uint64(h[0:8])
+
+	return binary.BigEndian.Uint64(h[:uint64ByteSize])
 }
 
 func uint64ToBytes(v uint64) []byte {
-	return []byte{
-		byte(v >> 56),
-		byte(v >> 48),
-		byte(v >> 40),
-		byte(v >> 32),
-		byte(v >> 24),
-		byte(v >> 16),
-		byte(v >> 8),
-		byte(v),
-	}
+	b := make([]byte, uint64ByteSize)
+	binary.BigEndian.PutUint64(b, v)
+	return b
 }
 
 func asciiEncodeInPlace(buf []byte) {
