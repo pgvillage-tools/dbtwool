@@ -7,6 +7,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const consistencyRetryDelay = 10 * time.Second
+
 // ConsistencyTest runs a consistency test against DB2
 func ConsistencyTest(
 	ctx context.Context,
@@ -82,7 +84,7 @@ func ConsistencyTest(
 	}
 
 	logSinceElapsed("T1: sleeping 10s');")
-	time.Sleep(10 * time.Second)
+	time.Sleep(consistencyRetryDelay)
 
 	logSinceElapsed("T1: COMMIT;")
 	if err := conn1.Commit(ctx); err != nil {
