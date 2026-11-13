@@ -26,7 +26,7 @@ jobs:
               - go.mod
               - go.sum
               - '**.go'
-              - .testcoverage.yml
+              - .testcoverage.yaml
               - '.github/workflows/ci-run-on-pr.yaml'
             unittest:
               - .testcoverage.yaml
