@@ -6,11 +6,12 @@ endif
 
 build:
 	go mod tidy
-	go build ./cmd/pgroute66
+	go build ./cmd/dbtwool
+	CGO_ENABLED=0 go build -ldflags "-s -w" ./cmd/pgtwool
 
 debug:
-	go build -gcflags "all=-N -l" ./cmd/pgroute66
-	${GOBIN}/dlv --headless --listen=:2345 --api-version=2 --accept-multiclient exec ./pgroute66 -- -c ./config/pgroute66_local.yaml
+	go build -gcflags "all=-N -l" ./cmd/dbtwool
+	${GOBIN}/dlv --headless --listen=:2345 --api-version=2 --accept-multiclient exec ./dbtwool -- -c ./config/dbtwool_local.yaml
 
 fmt:
 	golangci-lint run --fix
