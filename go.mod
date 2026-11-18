@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/ibmdb/go_ibm_db v0.5.4
-	github.com/jackc/pgx/v5 v5.12.0
+	github.com/jackc/pgx/v5 v5.13.0
 	github.com/moby/moby/api v1.56.1
 	github.com/onsi/ginkgo/v2 v2.34.0
 	github.com/onsi/gomega v1.44.0
